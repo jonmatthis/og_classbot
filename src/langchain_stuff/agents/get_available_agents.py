@@ -12,10 +12,13 @@ def load_all_agent_configuration_files() -> dict:
         available_agents[toml_path.stem] = toml.load(toml_path)
     return available_agents
 
+def get_agent_configuration(agent_name: str = None) -> dict:
+    available_agents = load_all_agent_configuration_files()
+    if agent_name is None:
+        return list(available_agents.values())[0]
+    else:
+        return available_agents[agent_name]
 
 def get_available_agents():
     available_agents = load_all_agent_configuration_files()
-    available_agents["enpisi"] = ""
-    available_agents["enpisi+enpisi"] = ""
-    available_agents["original_golem"] = ""
     return available_agents

@@ -2,7 +2,7 @@ import logging
 
 import discord
 
-from src.langchain_stuff.agents.agent_builder import AgentBuilder
+from src.langchain_stuff.agents.agent import AgentBuilder
 from src.langchain_stuff.agents.get_available_agents import get_available_agents
 
 logger = logging.getLogger(__name__)
