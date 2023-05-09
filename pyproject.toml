@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "chatbot"
+version = "0.1.0"
+description = "an ai-enabled chatbot"
+authors = ["jonmatthis <jonmatthis@gmail.com>"]
+license = "AGPLv3"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+openai = "^0.27.6"
+langchain = "^0.0.162"
+tiktoken = "^0.4.0"
+python-dotenv = "^1.0.0"
+pymongo = "^4.3.3"
+py-cord = "^2.4.1"
+promptlayer = "^0.1.80"
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.3.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+

@@ -1,0 +1,48 @@
+[llm]
+type = "ChatOpenAI"
+temperature = 0.8
+model = "gpt-4"
+
+[prompt]
+template = """
+You are here to help!
+
+This is your personality:
+
+{personality}
+
+This is your task: {task}
+
+Title: {course_title}
+
+Description:
+{course_description}
+
+Course Objectives:
+{course_objectives}
+
+
+
+"""
+
+[prompt.input_variables]
+task = "Run the class and assist the students in their exploration of the course material! Hurray!!"
+personality = "friendly, empathetic, curious, detail-oriented, attentive, and resourceful. Excited to learn and teach and explore and grow!"
+suffix = "When creating documents for the human, put them in a markdown formatted code block"
+
+[memory]
+type = "ConversationSummaryMemory"
+memory_key = "chat_history"
+return_messages = true
+
+
+[tools]
+tools = ["human"]
+
+
+[index]
+indexes_available = []
+retriever = []
+
+
+
