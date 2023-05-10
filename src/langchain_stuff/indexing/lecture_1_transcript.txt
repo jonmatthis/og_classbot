@@ -1,0 +1,220 @@
+
+
+Yeah. Welcome. Welcome to this class.
+
+So we are going to be teaching this class in the ways that I have learned to do online, decentralized, collaborative work using the various and sundried tools of free and open source software development. This is a scientific research based. Class. but we will be using the tools of software development because software development is a better model for science than sciences because of strong opinions that I have, which I will go into at appropriate intervals.
+
+The topic of the class is my area of expertise, which is the neural control of real world human movement. Scholar I don't want to go too deep Yeah. Here into my personal histories and research and whatnot. Other than, look, this paper just came out. I'm going to post a link to my thing.
+
+This is my, what is it? Google Scholar. Which is yeah, syllabus, who I am research wise is that, so have fun with that. It's like vision and motor control in real world stuff. If you look through this, what you'll tend to see, so first of all you can sort it by year to see what I've done recently. And then you can also sort of by cited by, which is like the people who have cited papers that I've published.
+
+And that's a good indication of like what my, like biggest work is. But notice that there's sort of a correlation there because the longer it's been out, the more long, the longer it's had to accumulate citations. There's a bunch of garbage metrics here, like things like H Index and I 10, like they're deeply problematic measures of like research productivity, but like we still use 'em cuz boy the world loves numbers.
+
+So you can look at that to get a sense of like what I do and. And the class, the content of the class will be on this topic, like both from a scientific perspective of how to humans and other animals and possibly robots use their weird, lumpy nervous systems to move their big floppy bodies through this complex world full of objects and gravity friction, things of that nature.
+
+That's a big question and we are not equipped to answer it here. And we're not gonna try to answer all of it, but we are going to try to like do a research unit on this topic using the various tools that I've kind of like developed in my life because the sort of the scientific side of the question is like, you know, this topic, but there's sort of like a technological conceit to it.
+
+Because the reality is, and if is that too. To, to study that question of how do you neurally control your body in the actual physical world that you live in is like, there's, there are practical questions for how you could study that. Like it requires tools and, and techniques to actually record behavior in a real world.
+
+Most of that in technology and tools that like mostly like either don't exist or didn't exist two or three years ago. A lot of the history of my research has involved coming up with a research question, realizing that the tools to study that question don't really exist. And then developing those tools myself and then publishing a paper on it.
+
+Like these these papers I published with Mary Hak are probably the best example of that. This one. This, this one, this one came out like a couple days ago. And then this one is probably like my high water mark in terms of like technical complexity of work that I've done. But it involved like, you know, a lot of duct tape jobs.
+
+Like, oh, here's a tool. There's a tool. Let's like strap it together with code and see what we can get out of it. We'll talk a little bit about this at some point, but, or we won't, we'll find out.
+
+If you follow the trajectory of this, of this stuff, like, it's just kind of a lot of like flip flapping around and sort of. Doing weird hacky stuff and then trying to manage the, the, the real sort of like tricky part is like wrapping it up into, maybe not with a bow, but with enough duct tape that it, that it creates a coherent unit that you can then hand off to someone and then ideally build off of.
+
+So this class is going to be built on that sort of approach. What does that mean? We'll find out as a group
+
+yeah, let's talk about the, let's talk about the class. So this class will be mostly run through Discord and GitHub. Those are two tools for collaborative for.
+
+There we go. Now you'll be over here.  📍 Good job. Discord is commonly, is very commonly used by online communities to organize work. It was originally a like a gaming platform, and then it kind of blew up during the pandemic.  Discord servers from like small, little sort of encapsulated communities where, you know, who is in there.
+
+This is our Discord server. It will change over time. And let me give you a, a brief tour, but first let me, yeah, that's a quick tour. So you've already gotten in here presumably. This is da da. So we're looking right now like the stage part, which is a weird part. But these things on the left are channels.
+
+So if I click on this one, this is the announcement channel, I will post announcements here. This is our patron saint and guiding load stone. This is the bedrock upon which I have built my whole life.
+
+I think the way I'm gonna do this is I'll make announcement posts and then I'll open up a thread. So I, I think that y'all can't post here like permissions wise. So, but you should be able to type in here like, hello, I am typing.
+
+We don't need to, we don't need to spell check anymore. There's some rules and stuff like that, whatever. And then these are forum posts. These are also whatever. This is the introductions area that I had y'all post into. We're gonna be using this for some stuff later. Meeting plans. This will be for later off topic is whatever.
+
+And then these are the voice channels. We're going to probably do. The stage thing has kind of been kind of weird, but we can, we'll use this for sort of like this kind of like presentation format where someone is talking and other people are listening. Then there's these voice channels, which I have to be careful not to click on cause I'll go into them, which are more for like, it's basically like a zoom room where multiple people can stream video, multiple, can stream their their screens.
+
+It is a great place for collaborative work. And then these are just system channels that sort of do system stuff.
+
+ In addition to the discord, we are also going to be using. This GitHub I got all or most of your GitHub username, so I'll be adding you to this. This is a, this is an organization, so neural control of human movement. Dash 2023 dash summer one is an organization that you will be added to at some point.
+
+GitHub is not great at notifications, so, but I'll let you know when I've done it. We'll, we'll figure it out. This face is amazing. Like this is so, so GitHub auto generates like a little like block colored block. Pattern every time you make a user count. So even if you don't make a user profile, you still have like a pattern associated with you.
+
+And we got this face. This was like a random role for the neural control of human movement organization is like this guy. He's great. I love him. I'm just happy, happy to meet this, this wonderful new friend and we'll see what we can do together. So within the organization there's this repository called Main, main Quartz repo.
+
+By the way, if you are listening to this, then you're like, I'm not a techy person. I don't know how to write programming. I don't know how to write Python code. I don't wanna know how to write Python code. That is not interesting to me. I'm here to learn about brains and stuff. I get you, I totally understand.
+
+You will not have to do any programming. You won't have, you might have to click on something on GitHub once or twice. But the goal, part of the main vibe of this is like, there's going to be a delineation of effort according to interest and background. We are going to be doing a class-wide research project, and there will be many kinds of tasks to be done for that project.
+
+Some of them will be technical, some of them will be less technical. And we'll do it together. What to fun? So does Gil Repository houses our syllabus such as It is
+
+. So the, the timing of this course is organized by week. So this first week is like preparation, introduction, like getting set up with accounts and stuff like that, of getting servers set up and sort of like getting customed to things. The next week week two is gonna be planning. So going the next week, we should have a better sense of like, who each of us are.
+
+And I'll have some way of like extracting like your skillsets about like your comfort and familiarity and interest in code versus like scientific stuff, versus like data collection stuff and yada, yada. And then on the third week we'll sort of have like a proposal ish type of thing where we'll have like a plan for what the project we're actually gonna do.
+
+And then the remainder of the, of the class is gonna be like four or five and six are just gonna be like, Research, data collection, data analysis, synthesis, sort of trying to figure out what we're gonna do as a project. And then the week seven is gonna be some kind of a presentation. We'll like, present it to ourselves, to each other.
+
+Like, you know, we'll have, you know, like seven, seven and eight, say week seven and eight are gonna be like the wrap up part, like where we bring it all together, as they say. And so that's gonna be the schedule we're gonna try to stick to.
+
+It is their, so a GitHub repository? GitHub is a repos is a website that hosts. People's code for every, like, not for every software project, but for a lot of software that you use in your life.
+
+The code lives on GitHub. It might live in a private repository that a company owns, companies like Google and whatnot. Or it might be in a public repository that is sort of free and openly available. This hours is a public repository. This is available. Anyone in the world can see this. It is managed by this license.
+
+This is the most aggressively open source license that exists because that's how I'd like to live my life. The Read Me document in this repository house holds our syllabus, including like the rough schedule and links to the server, the, the Discord server and the Canvas page, and things like that.
+
+There's a rough timeline we're gonna go through and course description and course objectives and now here's the thing about this GitHub repo. You'll notice this little guy right here, MK Docs dot Yml. This is a configuration file for a Make Docs documentation static website. Make Docs is a package service method that is very commonly used by open source projects to generate their documentation and their knowledge base.
+
+We are using specifically Make docs material which builds sites that look like this. It's got all sorts of stuff, blah, blah, blah. Textualize, these guys have a really nice documentation site, you know, tutorials and blah, blah, blah, blah, blah. And over here on our site so you can think of this repository as just like a folder.
+
+It's a folder full of files and some of those files and folders and stuff like that. In this folder called Docs, d o c s there are sort of more folders and more files and things like that. And whenever I push a commit, so which is to say if I change one of these files and I push that change into the repository, there's this magical action that gets triggered and it does, these, sort of, automatically does these series of steps.
+
+And so it installs dependencies, it copies the read me into like a, into the docs folder, and then it builds a website. And the website looks a little something like this. It's got a little light dark tab there and it's getting green, which is kind of weird. There's like no logo yet. And basically it just reproduces doesn't, the Gantt chart doesn't show up.
+
+So like, this is, this text right here is what generates this chart right here. This is called a Gantt chart. And I just discovered in this moment that it does not, it doesn't actually render on here, but that's fine. I think I can fix that. And docs, and so you got like community guidelines and then that those become like headings up here.
+
+And so what we're gonna do is over the course of this class, over the class of this course we are going to Freedom Camps. We're going to collectively come up with a research project around something related to the control of human movement in the real world, most likely relying on this FreeMoCap software.
+
+That I've been developing with my lab for the past several years. This is a free and open source mes motion capture system that runs from webcams and a bunch of like open source software. There's a GitHub for it and got like 2,500 stars, which is pretty good. Not too bad. And a, oh, this is, this is old.
+
+And there is also a, another Discord server that has last I checked. Actually I don't have, I don't have to. Last I check. It says right here. That has 1400 people in it, which is a lot. It's a lot of people. And so mostly I'm gonna be trying to use like the skills and whatnot and mechanisms that I've sort of figured out by developing this project and try to use that to organize us collectively as a group into doing some kind of a research project using this type of data.
+
+And then as the outcome for the class, we're going to basically try to create, try to try to, you know, do a bunch of like literature reviews of reading papers and like analysis of existing data, or maybe we'll collect some data, analyze that, and try to sort of form that together into some coherent research project, research output that we will then present to the world by, Putting the relevant information into the docs page of our, of our gi or our Google or our GitHub repository.
+
+This repository, so human research lab, that's my lab at at, at our school and stands for Human Movement Neuroscience. And this is a project that someone in my lab is doing looking at a slack line, looking at control of like walking on a slack line. And this is the page that he came up with.
+
+It's kind of drafty, but like this is some of the data. So this is him. He lives out in Colorado, and this is him standing on a slack line. This is plotting his center of mass and basic support. And this is something about like modeling it with a spring cart. Who's it? See it's kind of, you know, it's like some of the formatting is a little strange, but like content is good.
+
+And then here's a bunch of his just notes on like papers that he's read. Again, it's not a particularly coherent. Note system because it wasn't intended to be. It's literally just like, Hey, Phillip, dump your notes into this folder, kind of thing. But you know, one could imagine cleaning this up and then yeah, here's a bunch.
+
+Some more like research question stuff. And I think this is, yeah, this is now old. And
+
+ah, this one, yeah, this is the one I was looking for. Look at that. That's cool. See, this was recorded with GoPros GoPros of him and his backyard. And so we're going to be, a lot of the tools that I have built over the past couple years for this project are geared towards making this type of stuff accessible to students, accessible and usable to students.
+
+If it seems really advanced, it is really advanced. And if you're worried, you won't be able to use it. Don't worry about that part. It's a reasonable concern because it's, it's going to be difficult, but most of what I have been doing in my research and my effort in my life is to make this stuff accessible and usable by people who don't have any experience with it.
+
+It's part of the main vibe. Here's a little shtick. We follow a universal design philosophy with a goal of creating a system that serves the needs of a professional research scientist like me, while remaining intuitive to a 13 year old with no technical training and no outside assistance. And you're all old, less than 13, so you'll be able to use it, of course, as aspirational goal.
+
+But we're gonna figure it out anyway. Do,
+
+yeah. So again, just to reiterate, the main project is we do a research project. I organize everybody's work as if it was a open source decentralized research project, which it is. And then the outcome is that we put our results into this documentation, sort of this, this auto-generated make docs website and then your grade for the class.
+
+Cuz I know y'all, you, you must, you are required to care about your grade because of the stupid structure of our society. Good. Be based off of some combination of your individual. Small group and then collective effort. And by that I mean that all of the work that you do for this project will be logged automatically because it's all going to be funneled through Discord and GitHub.
+
+I will be using the weird and wacky new worlds of artificial intelligence to extract. The, the work that you're doing, and then just, just determine if it's nothing like that's, I'm not gonna try to evaluate your effort. You are not gonna be competing with your peers. All I'm gonna be figuring out is, did you collaborate or did you work, did you check the boxes?
+
+Did you put your effort in? If so, good job. And so your grade is gonna be some combination of the work you've done on your own, the work you've done in like small groups. And the overall outcome for everybody in our class.
+
+And yeah, so as well as like, you know, Whether or not you did the work. And again, if you do the work, if I am not embarrassed to give you an a, I will give you an A because I do not give a   about your grade. You will know if you did a good job. You will know if you are proud of the work that you've done.
+
+You will know if you have developed new skills that you can take with you into the next phases and aspects and parts of your life. I will also know that I don't need to give you a letter of grade to know that. We will also know at the end of this if we're proud of the work that we've done collectively as a class.
+
+I'm pretty sure we're gonna do something pretty dope. I hope, I think. And so that's, that's gonna be the work right there. There will be an evaluation based off of work that you do. If you just sit back and do nothing. It'll be really easy to tell and your grade will affect it. And if you do the work, then yeah, you'll be fine.
+
+. Talking about ai, oh, no controversy. If you didn't notice, there's been a lot going on, on in the AI side of the technology world. It's kind of hard to know what it all means and hard to know what it's going to do to our society or our educational system or our scientific system, or really anything in our world. But one thing that I know for sure is that AI is super duper powerful and really, really fun and.
+
+Accessible to everybody right now. The only cost of entry of doing absolutely unbelievable things with artificial intelligence is knowing how it works. And it just so happens that I have the skillset that you need to engage with this new technology. I know how open source software works. I have a PhD in cognitive science.
+
+I have like 20 years experience doing neuroscience, computational neuroscience, robotics. My first degree was in philosophy, studying philosophy of mine and philosophy of language. And now here we are. So I am not quite done with it yet, and I, I'm like, I'm not going to be done with it. Done is not the right way of talking about these things.
+
+But I am building a AI enabled G P T enabled, G P GT four enabled whatever. Discord bot who will live in our Discord server and assist you in your tasks. How assistive they will be unclear what they'll be able to do for you, what they'll be able to do for me, unclear. But I am confident that it will be able to do something and will be able to use it to better the output of this class.
+
+The reasons for doing that are both because I think we can, I want to use it. I want you to use AI in this class because I think it will help me teach a better class. I want you to use AI in this class cause I think it will help improve your output. I also want you to, I, I also want to build this because I think this  is a very important moment and it is centered around this emerging technology. And so I want an excuse to use it and learn how it works. And I want you to have an excuse to learn. Use it and learn how it works. Because it's very important. It will shape the future. It can and will be used against you.
+
+So you should know how it works, but you're not a programmer. Or maybe you are, but you're new to it. So, you know, writing a bunch of code to play with a machine like that, that might be out of your skillset. But you are presumably a language bearing primate as I am. And so you have language, you can speak language, presumably you can speak the English language, which is because of sort of Eurocentric imperialism a very useful language to be able to speak.
+
+And so  there'll be a channel in the server or like a command that you can use that will allow you to invoke the bot and the bot will. If this was, if this, if this lecture was on Thursday, I would already have it, but but it's not, so we don't But basically it'll be, it'll just be like another person in the server except that it'll talk weird and you'll be able to chat with it.
+
+It will have some knowledge of this lecture. It will have knowledge of the syllabus, it will have knowledge of your interactions with it. It knows how to write Python code. If you don't know how to make the line turn blue, you can just ask it. How do I make the line turn blue? And it'll tell you I'll, you'll, this might be a reach, but at some point I think we'll be able to just give it the link to a paper and it'll know about the paper.
+
+And then you can ask it questions about that paper. You can give, it links to five papers and you can say, what are the overlap between these things?
+
+. That's the kind of stuff we're gonna be doing together. It's gonna be tricky because I am now describing the usage of a tool that neither have I built, nor to my knowledge does this thing exist. It's actually, it's very, very similar in concept to the Khan Academy.
+
+Ai conmigo, I guess is what they call it. Solomon Khan did a TED Talk. He talks about ai, blah, blah, blah, and you're gonna use blah, blah, blah. Which is cool. I like it. I like Khan Academy. I've liked them for a long time, but also it's, they're not gonna share it, so let's make our own.
+
+
+
+I don't know. I think it'll be fun. There's a lot of
+
+yeah. One second. Let me wrap up. . And part of the reason why I am not worried too much about organizing this and sort of like having specific stuff is that I'm gonna take this video, take a SCR transcript of it, give it to an ai, and then tell them to organize it, and they'll do a great job.
+
+I've been using these things for as long as they've been around, which is like two or three months. I've dug all the way down to the bedrock. I have a pretty good sense of how they work.
+
+We're just gonna, we're just gonna go right down that rabbit hole. Yeah, just again, and to be clear, the tool that I am, this tool, this technology did not exist when I was asked to teach this course. So it's gonna be rocky, it's gonna be weird. I think it's gonna be fun.
+
+. But yeah, it's gonna be weird. It's gonna be rocky. There's gonna, things are gonna break. But I think it's, I think it'll be fun and I think we'll do something cool.
+
+. This is gonna be a collective project based class. We are going to do a thing together that is, that's real research that I think should be done. We're gonna answer questions that I don't know the answer to and nobody knows the answer to.
+
+And we're gonna use real tools to do it. Y'all are gonna be bad at it because it's super duper hard and probably most of you haven't done it before. That's fine. There's a lot of you. And I'm pretty good at breaking things up into little pieces that people can work on. And then it's becomes then the task of myself and the group and sort of like an organizational project management thing to make those little pieces fit together into something that's actually interesting and coherent.
+
+And is sort of resembles a research output
+
+ so I guess I should give you something like an assignment because I, I was hoping that the assignment for this week would be just like, talk to the AI and then I will. Then I will ask the AI what you all talked about and then use that to sort of shape the next course.
+
+But because it doesn't work yet that's not the project for this class. So  like, look something up. Look up stuff about the neural control of real world movement. Look up things about how to talk to AI bots. Look, chat G P T as a website. Go to their chat with it. Read about it. Watch a YouTube video. Look at some of my papers or whatever.
+
+Think about like, like walk around. Be a human in the real world. And as you're doing stuff, ask yourself, how in the hell is this possible? What possible configuration of electrical meat is making this experience? A reality. Have a little existential crisis. Get enough sleep,
+
+and we will try to take some of that existential dread and turn it into scientific output. Do the careful application of project management and organizational technology.
+
+Ah, sweet baby Jesus. I don't even know.
+
+I feel like there's, I imagine there's probably been a lot of like drinking from the fire hose kind of energy on the other side of the camera. I tend to live that life. So yeah, do you have any questions? Let me know
+
+
+
+ I'll do one of the sort of like live stream that turns into a video recordings per week. That will be thumb portions of like answering questions that have arisen like in the server throughout the week. Giving some kind of like a luxury sort of like, here's a presentation about a particular paper or a particular topic.
+
+And then a lot of, and then like project managing stuff of  like making sure that the, the group project is going along.
+
+
+
+
+
+Yeah. And just keep an eye on the announcements channel basically in the server. The rule is, is like if it's a white.like this you know, that's just like someone has posted something. So like in the. Like over here, like these are servers that I'm in. I am using an ALT account for this. I have a personal account that is sort of connected to this, but I'm using an alt.
+
+I've never tried using an alt before, but like it's just, I feel like it might work better in this context cuz like then you can just DM the alt directly in. It's not like overlapping with like too much of my other stuff cuz there's a lot of you. But yeah, so if there's a little.here that means that there's something new.
+
+But no one has specifically mentioned you.
+
+Yeah, there you go. See this little notification right here? That means that I have been directly replied to or mentioned. So like if someone like, if you like ping my username or something like that, or like when I ping everyone, that means like everyone in the server or here, which is everyone here.
+
+I think at some point we'll have roles and I can ping different, like select might be like Python people or science people or whatever people. And if you see one of these red things you should, you should check it out. And a white thing you should check out but you're like not obligated to do so.
+
+
+
+
+
+
+
+
+
+Discord is like kind of harder to navigate sometimes, and it's really easy to like lose notifications. So just, just check and then periodically just come check the announcements channel and then if you do that, you'll be, you'll be sorted. Okay. . Also, yeah, I mentioned this in the survey, but like, so I wrote this syllabus and then I took it and I just dumped it into Mid Journey, which is one of the AI intergeneration prompt things. And like this guy popped out like, look at this guy. Look, they're just, they're great. They're finger, they have mostly the right number of fingers, which is really hard for these ais.
+
+It's like, ah, this isn't, like, I, I like tweaked it a little bit. Like you can do like variations and whatnot. But I just clicked buttons, like I didn't actually make this. So it's kind of a really cool idea that like in, in the sort of like the statistical space defined by this, by these blobs of text, there's like images that are sort of close to those blobs in whatever high dimensional space these machine sort of learning models live in.
+
+If you look at the image that is close to the text, it's this. And like, that's cool. That's just cool. I don't know. It's like a neat idea. So if you, if you're looking at that and you're like, man, I sure wish that there was a way. That we could like, I don't know, scrape all the information in these introductions that y'all shared about like who you are and what your interests are.
+
+And then like, use that to make an image and then like, use that as like a parameter like of like what we're doing in class. That'd be super cool. .
+
+
+
+. Yeah, this'll be a fun class. I think. Fun and like chaotic, but I think it'll be interesting a group educational experience where we, like, I'm gonna teach y'all about neural control of human movement.
+
+Like, don't worry about that. It's not gonna be like, you'll learn stuff about that. But I think ideally classes are like vehicles for themselves. Like the, the content of the class is like the conceit To teach like the deeper lessons and the skills and the tool sets and whatnot, because ultimately studying like neural control of human behavior in the real world, that's a very niche topic.
+
+I think it's an important one but it's niche. It's very specific. And so the, the real skills that I wanna teach you are like the bigger ones of like decentralized collaboration across time and distance. How do you like at least familiarity with GitHub if you don't use it directly? And if you do use it directly, like how do you actually con collaborate with groups of people, like across, like asynchronously, across space?
+
+Like how do you do that? That's really hard. There's tools and we're gonna learn those tools. And then also how to talk to ais, like how do they work? What are their, what are they good at, what are they bad at? What can we do with them? I don't know. These are, these are like, Oftentimes teaching is like I teach you the basic parts of things I already know.
+
+And there's going to be a component of that here. Because like we're gonna be doing like small scale versions of things that I've been doing large scale versions of, but none of this is like candy cane work. Like none of this is stuff that like, I'm like, oh yeah, I know exactly how this is gonna go.
+
+I know exactly how I'm gonna run this. I know exactly how this tool works. Nah. Like I'm gonna be here learning stuff right there with you. I'll be learning different stuff, but I'm also gonna be learning. And one of the things I'm gonna be learning is like, how do I run a class like this? Cause there is no rule book any, and if there was a rule book, it would be bad.
+
