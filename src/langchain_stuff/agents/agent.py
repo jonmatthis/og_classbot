@@ -72,9 +72,11 @@ class Agent:
             if "streaming" in kwargs:
                 if kwargs["streaming"]:
                     from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
-                    ChatOpenAI(callbacks=[StreamingStdOutCallbackHandler()], **kwargs)
+                    llm = ChatOpenAI(callbacks=[StreamingStdOutCallbackHandler()], **kwargs)
+            else:
+                llm = ChatOpenAI(**kwargs)
 
-            return ChatOpenAI(**kwargs)
+        return llm
 
     def _create_chat_prompt(self, prompt_config: dict = None, chat_prompt: bool = True):
 
@@ -137,9 +139,9 @@ class Agent:
     def _configure_tools(self):
         math_llm = OpenAI(temperature=0.0)
         try:
-            tools =load_tools(
-            ["human", "llm-math"],
-            llm=math_llm,
+            tools = load_tools(
+                ["human", "llm-math"],
+                llm=math_llm,
             )
         except Exception as e:
             logger.error(f"Error loading tools: {e}")
