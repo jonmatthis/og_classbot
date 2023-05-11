@@ -61,9 +61,11 @@ class ChatCog(discord.Cog):
 
         logger.info(f"Sending message to the agent: {message.content}")
 
-        await self._active_chats["thread"].send("`Awaiting agent response...`")
+        response_message = await self._active_chats["thread"].send("`Awaiting bot response...`")
 
-        agent_response = self._course_assistant_llm_chain.process_input(message.content)
 
-        await self._active_chats["thread"].send(agent_response)
+        async with response_message.channel.typing():
+            bot_response = self._course_assistant_llm_chain.chain.run(human_input=message.content)
+
+        await response_message.edit(content=bot_response)
 

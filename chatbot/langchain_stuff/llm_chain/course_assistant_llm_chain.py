@@ -49,6 +49,9 @@ class CourseAssistant:
         self._chat_prompt = self._create_chat_prompt()
         self._memory = self._configure_memory()
         self._chain = self._create_llm_chain()
+    @property
+    def chain(self):
+        return self._chain
 
     def _configure_memory(self):
         return ConversationBufferMemory(memory_key="chat_history")
@@ -74,7 +77,7 @@ class CourseAssistant:
         )
         return chat_prompt
 
-    def process_input(self, input_text, input_language="English", output_language="French"):
+    def process_input(self, input_text):
         print(f"Input: {input_text}")
         print("Streaming response...\n")
         response = self._chain.run(human_input=input_text)
