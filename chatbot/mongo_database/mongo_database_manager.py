@@ -21,7 +21,7 @@ if __name__ == "__main__":
     test_document = {
         'name': 'Test',
         'description': 'This is a test document',
-        'timestamp': datetime.now(),
+        'timestamp': datetime.now().isoformat(),
     }
 
     # Insert the test document into a 'test' collection
