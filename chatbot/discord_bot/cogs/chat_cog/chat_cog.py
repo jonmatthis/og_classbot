@@ -7,6 +7,7 @@ from chatbot.langchain_stuff.llm_chain.course_assistant_llm_chain import CourseA
 
 logger = logging.getLogger(__name__)
 
+
 class ChatCog(discord.Cog):
     def __init__(self, discord_bot: discord.Bot):
         self._discord_bot = discord_bot
@@ -20,8 +21,6 @@ class ChatCog(discord.Cog):
         chat_title = f"{ctx.user.name}'s chat with {self._discord_bot.user.name}"
         logger.info(f"Starting chat: {chat_title}")
 
-
-
         message_embed = discord.Embed(
             title=chat_title,
             description=f"A conversation between {ctx.user.name} and the bot, started on {datetime.now()}",
@@ -29,7 +28,6 @@ class ChatCog(discord.Cog):
         )
 
         message_thread = await ctx.send(embed=message_embed)
-
 
         self._active_chats["thread"] = await message_thread.create_thread(
             name=chat_title,
@@ -63,9 +61,7 @@ class ChatCog(discord.Cog):
 
         response_message = await self._active_chats["thread"].send("`Awaiting bot response...`")
 
-
         async with response_message.channel.typing():
-            bot_response = self._course_assistant_llm_chain.chain.run(human_input=message.content)
+            bot_response = self._course_assistant_llm_chain.process_input(input_text=message.content)
 
         await response_message.edit(content=bot_response)
-

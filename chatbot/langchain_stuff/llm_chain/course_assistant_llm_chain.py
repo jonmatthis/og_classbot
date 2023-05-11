@@ -49,6 +49,7 @@ class CourseAssistant:
         self._chat_prompt = self._create_chat_prompt()
         self._memory = self._configure_memory()
         self._chain = self._create_llm_chain()
+
     @property
     def chain(self):
         return self._chain
@@ -73,7 +74,7 @@ class CourseAssistant:
         )
 
         chat_prompt = ChatPromptTemplate.from_messages(
-            [system_message_prompt,  human_message_prompt]
+            [system_message_prompt, human_message_prompt]
         )
         return chat_prompt
 

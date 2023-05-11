@@ -19,6 +19,6 @@ Consider each plan from the following perspectives:
 ```
 """
 [prompt.input_variables]
-do_something = {type = "text", default = "add a new feature"}
-purpose = {type = "text", default = "to make my life easier"}
-code = {type = "text", default = "print('hello world')"}
+do_something = { type = "text", default = "add a new feature" }
+purpose = { type = "text", default = "to make my life easier" }
+code = { type = "text", default = "print('hello world')" }

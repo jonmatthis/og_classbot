@@ -15,10 +15,8 @@ documents = loader.load()
 
 embeddings = HuggingFaceEmbeddings()
 
-
 text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
 texts = text_splitter.split_documents(documents)
-
 
 chroma_db = Chroma.from_documents(texts, embeddings)
 

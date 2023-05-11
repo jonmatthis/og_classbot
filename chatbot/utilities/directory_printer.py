@@ -1,7 +1,4 @@
-import pathlib
 from pathlib import Path
-
-
 
 EXCLUDED_DIRECTORIES = [".git",
                         ".idea",
@@ -14,14 +11,13 @@ EXCLUDED_DIRECTORIES = [".git",
 INCLUDED_FILE_EXTENSIONS = [".py",
                             ".md", ]
 
+
 class DirectoryWalker():
-
-
 
     def __init__(self,
                  root_dir: str,
                  excluded_directories: list = EXCLUDED_DIRECTORIES,
-                 included_file_extensions: list = INCLUDED_FILE_EXTENSIONS ):
+                 included_file_extensions: list = INCLUDED_FILE_EXTENSIONS):
         """
         Initialize the DirectoryWalker.
 
@@ -72,7 +68,6 @@ if __name__ == "__main__":
     # root_directory = input("Enter the root directory: ")
     # root_directory = r"C:\Users\jonma\github_repos\jonmatthis\golem_garden"
     root_directory = r"C:\Users\jonma\github_repos\jonmatthis\chatbot"
-
 
     print(f"Printing the structure of {root_directory}...")
     walker = DirectoryWalker(root_dir=root_directory,
