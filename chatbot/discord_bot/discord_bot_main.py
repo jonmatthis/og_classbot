@@ -4,8 +4,8 @@ import os
 
 from dotenv import load_dotenv
 
-from src.discord_bot.cogs.agent_cog.chat_cog import ChatCog
-from src.discord_bot.utilities.bot_maker import make_discord_bot
+from chatbot.discord_bot.cogs.chat_cog import ChatCog
+from chatbot.discord_bot.utilities.bot_maker import make_discord_bot
 
 load_dotenv()
 

@@ -1,0 +1,7 @@
+version: '3.9'
+
+services:
+  discord-bot:
+    build: .
+    ports:
+      - "1123:1123"

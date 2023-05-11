@@ -12,7 +12,7 @@ from langchain.memory import ConversationBufferMemory, ConversationBufferWindowM
     ConversationSummaryBufferMemory
 from langchain.prompts import HumanMessagePromptTemplate, SystemMessagePromptTemplate, ChatPromptTemplate
 
-from src.langchain_stuff.agents.get_available_agents import get_agent_configuration
+from chatbot.langchain_stuff.agents.get_available_agents import get_agent_configuration
 
 logger = logging.getLogger(__name__)
 

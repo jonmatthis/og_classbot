@@ -1,0 +1,24 @@
+[prompt]
+template = """
+How do I {do_something}?
+
+I want to use it for {purpose}.
+
+Come up with a few "architecture level" options for how I might implement this functionality and dicsuss the pros and cons of each. Be explicit about filenames and folder structures. Consider things like ease of implementation, conceptual simiplicity, and performance.
+
+Consider each plan from the following perspectives:
+- Supportive friend and highly experienced code mentor
+- Long term developer who is obsessed with software patterns, technical performance, and modern "best practices"
+- An experienced open source software developer who is focused on making it easier for outside developers to contribute.
+- A hard working, excited , but inexperienced student who is trying to learn how to code and is excited to contribute to the project but has no idea what is going on.
+
+- Here is the current code:
+
+```
+{code}
+```
+"""
+[prompt.input_variables]
+do_something = {type = "text", default = "add a new feature"}
+purpose = {type = "text", default = "to make my life easier"}
+code = {type = "text", default = "print('hello world')"}

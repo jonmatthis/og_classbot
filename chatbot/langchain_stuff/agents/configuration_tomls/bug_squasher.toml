@@ -1,0 +1,30 @@
+[prompt]
+template = """
+This code:
+
+```python
+{code}
+```
+
+Produced this error:
+
+```
+{error}
+```
+Please answer the following questions:
+
+#Error
+(what is the error?)
+
+#Likely Causes
+(what are some likely causes?)
+
+#Possible Solutions
+(what are some possible solutions?)
+
+#Additional Context if the quick fix doesn't work
+(Is there anything else that might be useful to know about this error?)
+
+#Ways to avoid this error in the future?
+(Is there a way to avoid this error in the future? If its just a typo or something like that, omit this part)
+"""
