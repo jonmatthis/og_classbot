@@ -2,7 +2,7 @@ from datetime import datetime
 
 from pymongo import MongoClient
 
-class MongoDBManager:
+class MongoDatabaseManager:
     def __init__(self, uri):
         self._client = MongoClient(uri)
         self._database = self._client.get_default_database('chatbot')
@@ -16,7 +16,7 @@ class MongoDBManager:
 
 if __name__ == "__main__":
     # Replace 'your_mongodb_uri' with your actual MongoDB URI
-    mongodb_manager = MongoDBManager('mongodb://localhost:27017') #run locally
+    mongodb_manager = MongoDatabaseManager('mongodb://localhost:27017') #run locally
 
     test_document = {
         'name': 'Test',

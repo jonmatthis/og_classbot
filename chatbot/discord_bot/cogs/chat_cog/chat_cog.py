@@ -48,9 +48,12 @@ class ChatCog(discord.Cog):
         # Make sure we won't be replying to ourselves.
         if message.author.id == self._discord_bot.user.id:
             return
-
-        # Make sure we're only replying to the active chat. (TODO - allow multiple inputs at the same time)
-        if not message.channel.id == self._active_chats["thread"].id:
+        try:
+            # Make sure we're only replying to the active chat. (TODO - allow multiple inputs at the same time)
+            if not message.channel.id == self._active_chats["thread"].id:
+                return
+        except Exception as e:
+            logger.error(f"Error while checking if message is in active chat: {e}")
             return
 
         # ignore if first character is ~
