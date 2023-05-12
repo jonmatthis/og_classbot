@@ -1,4 +1,5 @@
 import logging
+import os
 import uuid
 from datetime import datetime
 from typing import List, Dict, Any
@@ -25,6 +26,11 @@ class Chat(BaseModel):
         arbitrary_types_allowed = True
 
 
+def get_assistant(assistant_type: str):
+    if assistant_type == "default":
+        return CourseAssistant()
+
+
 class ChatCog(discord.Cog):
     def __init__(self, discord_bot: discord.Bot):
         self._discord_bot = discord_bot
@@ -46,43 +52,30 @@ class ChatCog(discord.Cog):
                                        user_id=ctx.user.id,
                                        user_name=ctx.user.name)
 
-    async def _create_chat_thread(self,
-                                  chat_title: str,
-                                  message_object: discord.Message,
-                                  user_id: int,
-                                  user_name: str):
-        thread = await message_object.create_thread(name=chat_title)
-        chat = Chat(
-            title=chat_title,
-            owner={"id": user_id,
-                   "name": user_name},
-            thread=thread,
-            assistant=CourseAssistant()
-        )
-
-        await chat.thread.send(f"<@{user_id}> is the thread owner.")
-        await chat.thread.send(f"The bot is ready to chat! "
-                               f"\n(bot ignores messages starting with ~)")
-        self._active_threads[chat.thread.id] = chat
-
-    async def _make_title_card_embed(self, user_name: str, chat_title: str):
-        return discord.Embed(
-            title=chat_title,
-            description=f"A conversation between {user_name} and the bot, started on {datetime.now()}",
-            color=0x25d790,
-        )
-
     @discord.Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
         try:
+            # Make sure we won't be replying to ourselves.
+            if payload.user_id == self._discord_bot.user.id:
+                return
+
+            # Make sure we're only responding to the correct emoji
+            if not payload.emoji.name == '🧠':
+                return
+
+            # Make sure we're only responding to the admin users
+            if not payload.user_id == int(os.getenv('ADMIN_USER_IDS')):
+                return
+
             # Get the channel and message using the payload
             channel = self._discord_bot.get_channel(payload.channel_id)
             message = await channel.fetch_message(payload.message_id)
-
-            await self._create_chat_thread(chat_title=self._create_chat_title_string(user_name=str(message.author)),
+            chat_title = self._create_chat_title_string(user_name=str(message.author))
+            await self._create_chat_thread(chat_title=chat_title,
                                            message_object=message,
                                            user_id=message.author.id,
-                                           user_name=str(message.author))
+                                           user_name=str(message.author),
+                                           assistant_type="default")
 
         except Exception as e:
             print(f'Error: {e}')
@@ -120,3 +113,32 @@ class ChatCog(discord.Cog):
 
     def _create_chat_title_string(self, user_name: str) -> str:
         return f"{user_name}'s chat with {self._discord_bot.user.name}"
+
+    async def _create_chat_thread(self,
+                                  chat_title: str,
+                                  message_object: discord.Message,
+                                  user_id: int,
+                                  user_name: str,
+                                  assistant_type: str = "default"):
+        thread = await message_object.create_thread(name=chat_title)
+
+        assistant = get_assistant(assistant_type=assistant_type)
+        chat = Chat(
+            title=chat_title,
+            owner={"id": user_id,
+                   "name": user_name},
+            thread=thread,
+            assistant=CourseAssistant()
+        )
+
+        await chat.thread.send(f"<@{user_id}> is the thread owner.")
+        await chat.thread.send(f"The bot is ready to chat! "
+                               f"\n(bot ignores messages starting with ~)")
+        self._active_threads[chat.thread.id] = chat
+
+    async def _make_title_card_embed(self, user_name: str, chat_title: str):
+        return discord.Embed(
+            title=chat_title,
+            description=f"A conversation between {user_name} and the bot, started on {datetime.now()}",
+            color=0x25d790,
+        )
