@@ -1,4 +1,5 @@
 import logging
+import os
 from datetime import datetime
 
 import discord
@@ -48,13 +49,12 @@ class ChatCog(discord.Cog):
         # Make sure we won't be replying to ourselves.
         if message.author.id == self._discord_bot.user.id:
             return
-        try:
-            # Make sure we're only replying to the active chat. (TODO - allow multiple inputs at the same time)
-            if not message.channel.id == self._active_chats["thread"].id:
+
+        # Only reply to active threads or the allowed channel
+        if len(self._active_chats) == 0:
+            if not message.channel.id == int(os.getenv("ALLOWED_CHANNELS")):
                 return
-        except Exception as e:
-            logger.error(f"Error while checking if message is in active chat: {e}")
-            return
+
 
         # ignore if first character is ~
         if message.content[0] == "~":
@@ -62,9 +62,14 @@ class ChatCog(discord.Cog):
 
         logger.info(f"Sending message to the agent: {message.content}")
 
-        response_message = await self._active_chats["thread"].send("`Awaiting bot response...`")
+        try:
+            if message.thread.id == self._active_chats["thread"].id:
+                response_message = await self._active_chats["thread"].send("`Awaiting bot response...`")
 
-        async with response_message.channel.typing():
-            bot_response = self._course_assistant_llm_chain.process_input(input_text=message.content)
+                async with response_message.channel.typing():
+                    bot_response = self._course_assistant_llm_chain.process_input(input_text=message.content)
 
-        await response_message.edit(content=bot_response)
+                await response_message.edit(content=bot_response)
+        except Exception as e:
+            logger.error(e)
+

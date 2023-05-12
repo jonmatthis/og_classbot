@@ -5,3 +5,16 @@ services:
     build: .
     ports:
       - "1123:1123"
+    depends_on:
+      - mongodb
+
+
+  mongodb:
+    image: mongo:latest
+    volumes:
+      - mongodb_data:/data/db
+    ports:
+      - "27018:27017"
+
+volumes:
+  mongodb_data:
