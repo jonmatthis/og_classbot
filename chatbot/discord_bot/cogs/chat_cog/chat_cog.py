@@ -41,43 +41,56 @@ class ChatCog(discord.Cog):
 
         logger.info(f"Starting chat {chat_title}")
 
-        title_card_embed = await self._make_title_card_embed(ctx, chat_title)
+        title_card_embed = await self._make_title_card_embed(str(ctx.user), chat_title)
         message_object = await ctx.send(embed=title_card_embed)
 
         await self._create_chat_thread(chat_title=chat_title,
                                        message_object=message_object,
-                                       user=ctx.user)
+                                       user_id=ctx.user.id,
+                                       user_name=ctx.user.name)
 
     async def _create_chat_thread(self,
                                   chat_title: str,
                                   message_object: discord.Message,
-                                  user: discord.User):
+                                  user_id: int,
+                                  user_name: str):
         thread = await message_object.create_thread(name=chat_title)
         chat = Chat(
             title=chat_title,
-            owner={"id": user.id,
-                   "name": user.name},
+            owner={"id": user_id,
+                   "name": user_name},
             thread=thread,
             assistant=CourseAssistant()
         )
 
-        await chat.thread.send(f"<@{str(user.id)}> is the thread owner.")
+        await chat.thread.send(f"<@{user_id}> is the thread owner.")
         await chat.thread.send(f"The bot is ready to chat! "
                                f"\n(bot ignores messages starting with ~)")
         self._active_threads[chat.thread.id] = chat
 
-    async def _make_title_card_embed(self, ctx, chat_title: str):
+    async def _make_title_card_embed(self, user_name:str, chat_title: str):
         return discord.Embed(
             title=chat_title,
-            description=f"A conversation between {ctx.user.name} and the bot, started on {datetime.now()}",
+            description=f"A conversation between {user_name} and the bot, started on {datetime.now()}",
             color=0x25d790,
         )
 
     @discord.Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
-        logger.info(f"Received reaction: {payload}")
-        if not payload.user_id == int(os.getenv('ADMIN_USER_IDS')):
-            return
+        try:
+            # Get the channel and message using the payload
+            channel = self._discord_bot.get_channel(payload.channel_id)
+            message = await channel.fetch_message(payload.message_id)
+
+
+
+            await self._create_chat_thread(chat_title="hi wow so wooow",
+                                      message_object=message,
+                                      user_id=message.author.id,
+                                      user_name=str(message.author))
+
+        except Exception as e:
+            print(f'Error: {e}')
 
     @discord.Cog.listener()
     async def on_message(self, message: discord.Message):
