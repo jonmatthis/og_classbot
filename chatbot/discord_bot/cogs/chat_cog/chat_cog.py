@@ -1,5 +1,4 @@
 import logging
-import os
 import uuid
 from datetime import datetime
 from typing import List, Dict, Any
@@ -36,9 +35,7 @@ class ChatCog(discord.Cog):
     @discord.slash_command(name="chat", description="Chat with the bot")
     async def chat(self,
                    ctx: discord.ApplicationContext):
-
-        chat_title = f"{ctx.user.name}'s chat with {self._discord_bot.user.name}"
-
+        chat_title = self._create_chat_title_string(str(ctx.user))
         logger.info(f"Starting chat {chat_title}")
 
         title_card_embed = await self._make_title_card_embed(str(ctx.user), chat_title)
@@ -68,7 +65,7 @@ class ChatCog(discord.Cog):
                                f"\n(bot ignores messages starting with ~)")
         self._active_threads[chat.thread.id] = chat
 
-    async def _make_title_card_embed(self, user_name:str, chat_title: str):
+    async def _make_title_card_embed(self, user_name: str, chat_title: str):
         return discord.Embed(
             title=chat_title,
             description=f"A conversation between {user_name} and the bot, started on {datetime.now()}",
@@ -82,12 +79,10 @@ class ChatCog(discord.Cog):
             channel = self._discord_bot.get_channel(payload.channel_id)
             message = await channel.fetch_message(payload.message_id)
 
-
-
-            await self._create_chat_thread(chat_title="hi wow so wooow",
-                                      message_object=message,
-                                      user_id=message.author.id,
-                                      user_name=str(message.author))
+            await self._create_chat_thread(chat_title=self._create_chat_title_string(user_name=str(message.author)),
+                                           message_object=message,
+                                           user_id=message.author.id,
+                                           user_name=str(message.author))
 
         except Exception as e:
             print(f'Error: {e}')
@@ -122,3 +117,6 @@ class ChatCog(discord.Cog):
             await response_message.edit(content=bot_response)
         except Exception as e:
             logger.error(e)
+
+    def _create_chat_title_string(self, user_name: str) -> str:
+        return f"{user_name}'s chat with {self._discord_bot.user.name}"
