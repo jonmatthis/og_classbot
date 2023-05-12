@@ -2,6 +2,14 @@ import asyncio
 import logging
 import os
 
+import logging as logging
+
+from chatbot.system.logging.configure_logging import configure_logging
+
+configure_logging(entry_point="discord")
+
+
+
 from dotenv import load_dotenv
 
 from chatbot.discord_bot.cogs.chat_cog.chat_cog import ChatCog

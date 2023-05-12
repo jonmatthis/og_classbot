@@ -30,7 +30,7 @@ def make_discord_bot():
 
     @bot.event
     async def on_message(message):
-        logger.info(f"Received message: {message}")
+        logger.info(f"Received message: {message.content}")
         database.insert('messages', {
             'author': str(message.author),
             'author_id': message.author.id,

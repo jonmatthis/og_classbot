@@ -203,6 +203,14 @@ openai = ["openai (>=0,<1)"]
 qdrant = ["qdrant-client (>=1.1.2,<2.0.0)"]
 
 [[package]]
+name = "logging"
+version = "0.4.9.6"
+description = "A logging module for Python"
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "marshmallow"
 version = "3.19.0"
 description = "A lightweight library for converting complex datatypes to and from native Python datatypes."
@@ -575,7 +583,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "078ba12ede502e2026973438156c49954a2eae7d00489efc903a3a61318e6f51"
+content-hash = "f4e6b44b4f569971f8293dee104aa218cc7a79ab8c4ce7a04d753767836fd7db"
 
 [metadata.files]
 aiohttp = [
@@ -948,6 +956,9 @@ idna = [
 langchain = [
     {file = "langchain-0.0.162-py3-none-any.whl", hash = "sha256:fd499fa047a5e52233bdc7fff442be9175b40b0fa3e6edbea58c9996f6750e38"},
     {file = "langchain-0.0.162.tar.gz", hash = "sha256:90712ca5b953475140fedf019c0c84dc453b15465d460ae0ef31026f5e949024"},
+]
+logging = [
+    {file = "logging-0.4.9.6.tar.gz", hash = "sha256:26f6b50773f085042d301085bd1bf5d9f3735704db9f37c1ce6d8b85c38f2417"},
 ]
 marshmallow = [
     {file = "marshmallow-3.19.0-py3-none-any.whl", hash = "sha256:93f0958568da045b0021ec6aeb7ac37c81bfcccbb9a0e7ed8559885070b3a19b"},

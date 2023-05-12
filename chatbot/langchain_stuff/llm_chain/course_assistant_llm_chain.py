@@ -80,9 +80,6 @@ class CourseAssistant:
         self._memory = self._configure_memory()
         self._chain = self._create_llm_chain()
 
-    @property
-    def chain(self):
-        return self._chain
 
     def _configure_memory(self):
         return ConversationBufferMemory(memory_key="chat_history")
