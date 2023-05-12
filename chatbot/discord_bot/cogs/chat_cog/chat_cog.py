@@ -2,7 +2,7 @@ import logging
 import os
 import uuid
 from datetime import datetime
-from typing import List
+from typing import List, Dict, Any
 
 import discord
 from pydantic import BaseModel
@@ -14,13 +14,12 @@ logger = logging.getLogger(__name__)
 
 class Chat(BaseModel):
     title: str
-    owner: int
-    title_card_embed: discord.Embed  # await self._make_title_card_embed(ctx, chat_title)
+    owner: Dict[str, Any]
     thread: discord.Thread
     assistant: CourseAssistant
 
     started_at: str = datetime.now().isoformat()
-    id: str = uuid.uuid4()
+    chat_id: str = uuid.uuid4()
     messages: List = []
 
     class Config:
@@ -39,25 +38,32 @@ class ChatCog(discord.Cog):
                    ctx: discord.ApplicationContext):
 
         chat_title = f"{ctx.user.name}'s chat with {self._discord_bot.user.name}"
+
         logger.info(f"Starting chat {chat_title}")
 
         title_card_embed = await self._make_title_card_embed(ctx, chat_title)
         message_object = await ctx.send(embed=title_card_embed)
-        thread = await message_object.create_thread(name=chat_title)
 
+        await self._create_chat_thread(chat_title=chat_title,
+                                       message_object=message_object,
+                                       user=ctx.user)
+
+    async def _create_chat_thread(self,
+                                  chat_title: str,
+                                  message_object: discord.Message,
+                                  user: discord.User):
+        thread = await message_object.create_thread(name=chat_title)
         chat = Chat(
             title=chat_title,
-            owner=ctx.user.id,
-            title_card_embed=title_card_embed,
+            owner={"id": user.id,
+                   "name": user.name},
             thread=thread,
             assistant=CourseAssistant()
         )
 
-        await ctx.respond("Conversation started.")
-        await chat.thread.send(f"<@{str(ctx.user.id)}> is the thread owner.")
+        await chat.thread.send(f"<@{str(user.id)}> is the thread owner.")
         await chat.thread.send(f"The bot is ready to chat! "
                                f"\n(bot ignores messages starting with ~)")
-
         self._active_threads[chat.thread.id] = chat
 
     async def _make_title_card_embed(self, ctx, chat_title: str):
@@ -66,6 +72,12 @@ class ChatCog(discord.Cog):
             description=f"A conversation between {ctx.user.name} and the bot, started on {datetime.now()}",
             color=0x25d790,
         )
+
+    @discord.Cog.listener()
+    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
+        logger.info(f"Received reaction: {payload}")
+        if not payload.user_id == int(os.getenv('ADMIN_USER_IDS')):
+            return
 
     @discord.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -77,8 +89,7 @@ class ChatCog(discord.Cog):
 
         # Only respond to non-thread messages in the active channel
         if not message.channel.__class__ == discord.Thread:
-            if not message.channel.id == int(os.getenv("ALLOWED_CHANNELS")):
-                return
+            return
 
         if not message.channel.id in list(self._active_threads.keys()):
             return
