@@ -111,6 +111,12 @@ class CourseAssistant:
         response = self._chain.run(human_input=input_text)
         return response
 
+    async def async_process_input(self, input_text):
+        print(f"Input: {input_text}")
+        print("Streaming response...\n")
+        response = await self._chain.arun(human_input=input_text)
+        return response
+
     def demo(self):
         print("Welcome to the Neural Control Assistant demo!")
         print("You can ask questions or provide input related to the course.")

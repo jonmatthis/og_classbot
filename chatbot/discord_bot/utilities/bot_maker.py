@@ -17,7 +17,7 @@ database = None
 def make_discord_bot():
     global database
     if database is None:
-        database = MongoDatabaseManager(os.getenv('MONGODB_URI'))
+        database = MongoDatabaseManager()
 
     intents = discord.Intents.default()
     intents.message_content = True

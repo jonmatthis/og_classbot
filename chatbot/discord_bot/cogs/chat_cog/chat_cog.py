@@ -105,7 +105,7 @@ class ChatCog(discord.Cog):
             response_message = await chat.thread.send("`Awaiting bot response...`")
 
             async with response_message.channel.typing():
-                bot_response = chat.assistant.process_input(input_text=message.content)
+                bot_response = await chat.assistant.async_process_input(input_text=message.content)
 
             await response_message.edit(content=bot_response)
         except Exception as e:
@@ -128,7 +128,7 @@ class ChatCog(discord.Cog):
             owner={"id": user_id,
                    "name": user_name},
             thread=thread,
-            assistant=CourseAssistant()
+            assistant=assistant
         )
 
         await chat.thread.send(f"<@{user_id}> is the thread owner.")

@@ -1,11 +1,21 @@
+import os
 from datetime import datetime
 
 from pymongo import MongoClient
 
+
+
 class MongoDatabaseManager:
-    def __init__(self, uri):
-        self._client = MongoClient(uri)
+    def __init__(self):
+        self._client = MongoClient(self.get_mongo_uri())
         self._database = self._client.get_default_database('chatbot')
+
+    def get_mongo_uri(self)->str:
+        is_docker = os.getenv('IS_DOCKER', False)
+        if is_docker:
+            return os.getenv('MONGO_URI_DOCKER')
+        else:
+            return os.getenv('MONGO_URI_LOCAL')
 
     def insert(self, collection, document):
         return self._database[collection].insert_one(document)
