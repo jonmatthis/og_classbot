@@ -7,7 +7,7 @@ from typing import List, Dict, Any
 import discord
 from pydantic import BaseModel
 
-from chatbot.langchain_stuff.llm_chain.course_assistant_llm_chain import CourseAssistant
+from chatbot.langchain_stuff.llm_chain.course_assistant import CourseAssistant
 
 logger = logging.getLogger(__name__)
 
