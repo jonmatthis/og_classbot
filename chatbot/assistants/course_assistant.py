@@ -1,13 +1,19 @@
+import uuid
+
 from dotenv import load_dotenv
-from langchain import LLMChain
+from langchain import LLMChain, OpenAI
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
+from langchain.chains.summarize import load_summarize_chain
 from langchain.chat_models import ChatOpenAI
-from langchain.memory import ConversationBufferMemory
+from langchain.memory import ConversationBufferMemory, MongoDBChatMessageHistory
 from langchain.prompts import (
     SystemMessagePromptTemplate,
     HumanMessagePromptTemplate,
     ChatPromptTemplate,
 )
+
+from chatbot.mongo_database.mongo_database_manager import get_mongo_uri, get_mongo_chat_history_collection_name, \
+    get_mongo_database_name
 
 COURSE_ASSISTANT_SYSTEM_TEMPLATE = """
 
@@ -70,7 +76,8 @@ COURSE_ASSISTANT_SYSTEM_TEMPLATE = """
 class CourseAssistant:
     def __init__(self,
                  temperature=0.8,
-                 model_name="gpt-4"):
+                 model_name="gpt-4",
+                 friend_to: str = "test_student"):
         load_dotenv()
         self._chat_llm = ChatOpenAI(
             streaming=True,
@@ -78,18 +85,26 @@ class CourseAssistant:
             temperature=temperature,
             model_name=model_name,
         )
+
+        self._friend_to = friend_to
+
         self._chat_prompt = self._create_chat_prompt()
-        self._memory = self._configure_memory()
+        self._chat_memory = self._configure_chat_memory()
+        self._database_memory = self._configure_database_memory()
         self._chain = self._create_llm_chain()
 
+        self._summarize_chain = load_summarize_chain(llm=OpenAI(temperature=0),
+                                                     chain_type="refine")
 
-    def _configure_memory(self):
+    def _configure_chat_memory(self):
+
         return ConversationBufferMemory(memory_key="chat_history")
 
     def _create_llm_chain(self):
+
         return LLMChain(llm=self._chat_llm,
                         prompt=self._chat_prompt,
-                        memory=self._memory,
+                        memory=self._chat_memory,
                         verbose=True,
                         )
 
@@ -110,8 +125,25 @@ class CourseAssistant:
     def process_input(self, input_text):
         print(f"Input: {input_text}")
         print("Streaming response...\n")
+
+        self._database_memory.add_user_message(input_text)
         response = self._chain.run(human_input=input_text)
+        self._database_memory.add_ai_message(response)
+
+        self._run_summarizer_chain()
+
         return response
+
+    def _run_summarizer_chain(self, number_of_messages_to_summarize=5):
+
+        number_of_recent_messages = min(number_of_messages_to_summarize, len(self._database_memory.messages))
+
+        recent_messages = self._database_memory.messages[-number_of_recent_messages:]
+        self._chat_summary = self._summarize_chain.run(recent_messages)
+        print(f"Chat summary for messages: \n "
+              f"{recent_messages},\n"
+              f"Summary: \n"
+              f"{self._chat_summary}")
 
     async def async_process_input(self, input_text):
         print(f"Input: {input_text}")
@@ -134,6 +166,18 @@ class CourseAssistant:
             response = self.process_input(input_text)
 
             print("\n")
+
+    def _configure_database_memory(self):
+        try:
+            return MongoDBChatMessageHistory(
+                connection_string=get_mongo_uri(),
+                session_id=uuid.uuid4().hex,
+                database_name=get_mongo_database_name(),
+                collection_name=get_mongo_chat_history_collection_name(),
+            )
+        except Exception as e:
+            print(f"Error connecting to MongoDB: {e}")
+            raise e
 
 
 if __name__ == "__main__":

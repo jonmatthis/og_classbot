@@ -3,19 +3,23 @@ from datetime import datetime
 
 from pymongo import MongoClient
 
-MONGODB_COLLECTION_NAME: str = 'humon-chatbot'
+
+def get_mongo_uri() -> str:
+    is_docker = os.getenv('IS_DOCKER', False)
+    if is_docker:
+        return os.getenv('MONGO_URI_DOCKER')
+    else:
+        return os.getenv('MONGO_URI_LOCAL')
+def get_mongo_database_name():
+    return os.getenv('MONGODB_DATABASE_NAME')
+
+def get_mongo_chat_history_collection_name():
+    return os.getenv('MONGODB_CHAT_HISTORY_COLLECTION_NAME')
 
 class MongoDatabaseManager:
     def __init__(self,):
-        self._client = MongoClient(self.get_mongo_uri())
-        self._database = self._client.get_default_database(MONGODB_COLLECTION_NAME)
-
-    def get_mongo_uri(self)->str:
-        is_docker = os.getenv('IS_DOCKER', False)
-        if is_docker:
-            return os.getenv('MONGO_URI_DOCKER')
-        else:
-            return os.getenv('MONGO_URI_LOCAL')
+        self._client = MongoClient(get_mongo_uri())
+        self._database = self._client.get_default_database(get_mongo_database_name())
 
     def get_collection(self, collection_name: str):
         return self._database[collection_name]
