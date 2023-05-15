@@ -6,9 +6,9 @@ from pymongo import MongoClient
 
 
 class MongoDatabaseManager:
-    def __init__(self):
+    def __init__(self, collection_name: str = 'humon-chatbot'):
         self._client = MongoClient(self.get_mongo_uri())
-        self._database = self._client.get_default_database('chatbot')
+        self._database = self._client.get_default_database('collection_name')
 
     def get_mongo_uri(self)->str:
         is_docker = os.getenv('IS_DOCKER', False)

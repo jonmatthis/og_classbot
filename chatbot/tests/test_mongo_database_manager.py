@@ -1,5 +1,10 @@
+import os
+
+from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
+
+
 def test_mongodb_manager():
-    mongodb_manager = MongoDBManager(os.getenv('MONGODB_URI'))
+    mongodb_manager = MongoDatabaseManager(os.getenv('MONGODB_URI'))
 
     test_document = {
         'name': 'Test',
