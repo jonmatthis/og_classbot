@@ -7,7 +7,7 @@ from typing import List, Dict, Any
 import discord
 from pydantic import BaseModel
 
-from chatbot.langchain_stuff.llm_chain.course_assistant import CourseAssistant
+from chatbot.assistants.course_assistant import CourseAssistant
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
 
 logger = logging.getLogger(__name__)

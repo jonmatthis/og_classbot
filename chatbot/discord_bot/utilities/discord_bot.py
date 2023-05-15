@@ -1,31 +1,30 @@
 import logging
 
+import discord
 from dotenv import load_dotenv
 
-load_dotenv()
-
-import discord
-
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
+
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
 
+class DiscordBot(discord.Bot):
+    def __init__(self,
+                 mongo_database: MongoDatabaseManager):
+        super().__init__(intents=discord.Intents.all())
+        self.mongo_database = mongo_database
 
-def make_discord_bot(mongo_database: MongoDatabaseManager):
-    intents = discord.Intents.default()
-    intents.message_content = True
-    bot = discord.Bot(intents=intents)
-
-    @bot.event
-    async def on_ready():
+    @discord.Cog.listener()
+    async def on_ready(self):
         logger.info("Bot is ready!")
-        print(f"{bot.user} is ready and online!")
+        print(f"{self.user} is ready and online!")
 
-    @bot.event
-    async def on_message(message):
+    @discord.Cog.listener()
+    async def on_message(self, message):
         logger.info(f"Received message: {message.content}")
-        mongo_database.insert('messages', {
+        self.mongo_database.insert('messages', {
             'author': str(message.author),
             'author_id': message.author.id,
             'user_id': message.author.id,
@@ -35,12 +34,13 @@ def make_discord_bot(mongo_database: MongoDatabaseManager):
             'channel': message.channel.name,
             'jump_url': message.jump_url,
             'thread': message.thread if message.thread else 'None',
-            'dump': message.__str__(),
+            'dump': str(message)
         })
 
-    @bot.slash_command(name="hello", description="Say hello to the bot")
-    async def hello(ctx):
+    @discord.slash_command(name="hello", description="Say hello to the bot")
+    async def hello(self, ctx):
         logger.info(f"Received hello command: {ctx}")
         await ctx.respond("Hey!")
 
-    return bot
+    def run(self, token: str):
+        self.run(token)

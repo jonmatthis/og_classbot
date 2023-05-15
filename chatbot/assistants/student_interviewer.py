@@ -12,7 +12,7 @@ from langchain.prompts import (
 )
 from pydantic import BaseModel
 
-NEURAL_CONTROL_OF_REAL_WORLD_HUMAN_MOVEMENT_COURSE_STUDENT_INTERVIEWER_TEMPLATE = """
+STUDENT_INTERVIEWER_TEMPLATE = """
 
             You are a teaching assistant for the course: Neural Control of Real-World Human Movement
             
@@ -82,7 +82,7 @@ class StudentInterviewSchema(BaseModel):
         return json.dumps(self.dict(), indent=2)
 
 
-class Introduction:
+class IntroductionAssistant:
     def __init__(self, temperature=0.8, model_name="gpt-4"):
         load_dotenv()
         self._chat_llm = ChatOpenAI(
@@ -108,7 +108,7 @@ class Introduction:
     def _create_chat_prompt(self):
         student_interview_parser = PydanticOutputParser(pydantic_object=StudentInterviewSchema)
         system_message_prompt = SystemMessagePromptTemplate.from_template(
-            template=NEURAL_CONTROL_OF_REAL_WORLD_HUMAN_MOVEMENT_COURSE_STUDENT_INTERVIEWER_TEMPLATE,
+            template=STUDENT_INTERVIEWER_TEMPLATE,
         )
         human_template = "{human_input}"
         human_message_prompt = HumanMessagePromptTemplate.from_template(

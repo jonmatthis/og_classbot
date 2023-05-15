@@ -9,7 +9,7 @@ from langchain.prompts import (
     ChatPromptTemplate,
 )
 
-NEURAL_CONTROL_OF_REAL_WORLD_HUMAN_MOVEMENT_COURSE_ASSISTANT_SYSTEM_TEMPLATE = """
+COURSE_ASSISTANT_SYSTEM_TEMPLATE = """
 
             You are a teaching assistant for the course: Neural Control of Real-World Human Movement
             
@@ -93,7 +93,7 @@ class CourseAssistant:
 
     def _create_chat_prompt(self):
         system_message_prompt = SystemMessagePromptTemplate.from_template(
-            NEURAL_CONTROL_OF_REAL_WORLD_HUMAN_MOVEMENT_COURSE_ASSISTANT_SYSTEM_TEMPLATE
+            COURSE_ASSISTANT_SYSTEM_TEMPLATE
         )
         human_template = "{human_input}"
         human_message_prompt = HumanMessagePromptTemplate.from_template(
