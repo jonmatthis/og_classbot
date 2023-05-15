@@ -1,5 +1,4 @@
 import logging
-import os
 
 from dotenv import load_dotenv
 
@@ -11,14 +10,9 @@ from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
 
 logger = logging.getLogger(__name__)
 
-database = None
 
 
-def make_discord_bot():
-    global database
-    if database is None:
-        database = MongoDatabaseManager()
-
+def make_discord_bot(mongo_database: MongoDatabaseManager):
     intents = discord.Intents.default()
     intents.message_content = True
     bot = discord.Bot(intents=intents)
@@ -31,7 +25,7 @@ def make_discord_bot():
     @bot.event
     async def on_message(message):
         logger.info(f"Received message: {message.content}")
-        database.insert('messages', {
+        mongo_database.insert('messages', {
             'author': str(message.author),
             'author_id': message.author.id,
             'user_id': message.author.id,

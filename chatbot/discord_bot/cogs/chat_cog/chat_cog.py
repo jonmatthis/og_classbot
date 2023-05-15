@@ -8,6 +8,7 @@ import discord
 from pydantic import BaseModel
 
 from chatbot.langchain_stuff.llm_chain.course_assistant import CourseAssistant
+from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
 
 logger = logging.getLogger(__name__)
 
@@ -29,18 +30,28 @@ class Chat(BaseModel):
 def get_assistant(assistant_type: str):
     if assistant_type == "default":
         return CourseAssistant()
+    if assistant_type == "introduction":
+        return IntroductionAssistant()
 
 
 class ChatCog(discord.Cog):
-    def __init__(self, discord_bot: discord.Bot):
+    def __init__(self,
+                 discord_bot: discord.Bot,
+                 mongo_database: MongoDatabaseManager):
         self._discord_bot = discord_bot
+        self._mongo_database = mongo_database
         self._active_threads = {}
-        # self._course_assistant_llm_chain = CourseAssistant()
+        self._allowed_channels = os.getenv("ALLOWED_CHANNELS").split(",")
+        self._allowed_channels = [int(channel) for channel in self._allowed_channels]
         self._course_assistant_llm_chains = {}
 
     @discord.slash_command(name="chat", description="Chat with the bot")
     async def chat(self,
                    ctx: discord.ApplicationContext):
+
+        if not ctx.channel.id in self._allowed_channels:
+            return
+
         chat_title = self._create_chat_title_string(str(ctx.user))
         logger.info(f"Starting chat {chat_title}")
 
@@ -88,7 +99,7 @@ class ChatCog(discord.Cog):
         if message.author.id == self._discord_bot.user.id:
             return
 
-        # Only respond to non-thread messages in the active channel
+        # Only respond to messages in threads
         if not message.channel.__class__ == discord.Thread:
             return
 
@@ -99,8 +110,18 @@ class ChatCog(discord.Cog):
         if message.content[0] == "~":
             return
 
-        logger.info(f"Sending message to the agent: {message.content}")
         chat = self._active_threads[message.channel.id]
+
+        self._mongo_database.upsert(collection="chat_logs",
+                                    query={"user_id": message.author.id,
+                                           "thread_id": message.channel.id,
+                                           "thread_title": chat.title,
+                                           "start_time": chat.started_at
+                                           },
+                                    data={"$push": {"messages": {"human_message": message.content}}})
+
+        logger.info(f"Sending message to the agent: {message.content}")
+
         try:
             response_message = await chat.thread.send("`Awaiting bot response...`")
 
@@ -108,6 +129,13 @@ class ChatCog(discord.Cog):
                 bot_response = await chat.assistant.async_process_input(input_text=message.content)
 
             await response_message.edit(content=bot_response)
+            self._mongo_database.upsert(collection="chat_logs",
+                                        query={"user_id": message.author.id,
+                                               "thread_id": message.channel.id,
+                                               "thread_title": chat.title,
+                                               "start_time": chat.started_at},
+                                        data={"$push": {"messages": {"ai_response": bot_response}}})
+
         except Exception as e:
             logger.error(e)
 
@@ -120,6 +148,7 @@ class ChatCog(discord.Cog):
                                   user_id: int,
                                   user_name: str,
                                   assistant_type: str = "default"):
+
         thread = await message_object.create_thread(name=chat_title)
 
         assistant = get_assistant(assistant_type=assistant_type)

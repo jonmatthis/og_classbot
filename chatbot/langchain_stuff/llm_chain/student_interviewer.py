@@ -82,7 +82,7 @@ class StudentInterviewSchema(BaseModel):
         return json.dumps(self.dict(), indent=2)
 
 
-class StudentInterviewer:
+class Introduction:
     def __init__(self, temperature=0.8, model_name="gpt-4"):
         load_dotenv()
         self._chat_llm = ChatOpenAI(
@@ -150,5 +150,5 @@ class StudentInterviewer:
 
 
 if __name__ == "__main__":
-    assistant = StudentInterviewer()
+    assistant = Introduction()
     assistant.demo()

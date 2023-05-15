@@ -4,6 +4,7 @@ import os
 
 import logging as logging
 
+from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
 from chatbot.system.logging.configure_logging import configure_logging
 
 configure_logging(entry_point="discord")
@@ -21,8 +22,10 @@ logger = logging.getLogger(__name__)
 
 
 async def main():
-    discord_bot = make_discord_bot()
-    discord_bot.add_cog(ChatCog(discord_bot=discord_bot))
+    mongo_database = MongoDatabaseManager()
+    discord_bot = make_discord_bot(mongo_database=mongo_database)
+    discord_bot.add_cog(ChatCog(discord_bot=discord_bot,
+                                mongo_database=mongo_database))
     await discord_bot.start(os.getenv("DISCORD_TOKEN"))
 
 

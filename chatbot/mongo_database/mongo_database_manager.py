@@ -20,6 +20,9 @@ class MongoDatabaseManager:
     def insert(self, collection, document):
         return self._database[collection].insert_one(document)
 
+    def upsert(self, collection, query, data):
+        return self._database[collection].update_one(query, data, upsert=True)
+
     def find(self, collection, query={}):
         return self._database[collection].find(query)
 
