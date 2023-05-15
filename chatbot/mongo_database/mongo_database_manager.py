@@ -3,12 +3,12 @@ from datetime import datetime
 
 from pymongo import MongoClient
 
-
+MONGODB_COLLECTION_NAME: str = 'humon-chatbot'
 
 class MongoDatabaseManager:
-    def __init__(self, collection_name: str = 'humon-chatbot'):
+    def __init__(self,):
         self._client = MongoClient(self.get_mongo_uri())
-        self._database = self._client.get_default_database('collection_name')
+        self._database = self._client.get_default_database(MONGODB_COLLECTION_NAME)
 
     def get_mongo_uri(self)->str:
         is_docker = os.getenv('IS_DOCKER', False)
@@ -17,6 +17,8 @@ class MongoDatabaseManager:
         else:
             return os.getenv('MONGO_URI_LOCAL')
 
+    def get_collection(self, collection_name: str):
+        return self._database[collection_name]
     def insert(self, collection, document):
         return self._database[collection].insert_one(document)
 

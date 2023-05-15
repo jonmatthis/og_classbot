@@ -17,6 +17,7 @@ py-cord = "^2.4.1"
 promptlayer = "^0.1.80"
 toml = "^0.10.2"
 dnspython = "^2.3.0"
+rich = "^13.3.5"
 
 
 [tool.poetry.group.dev.dependencies]

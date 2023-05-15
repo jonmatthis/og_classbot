@@ -7,7 +7,8 @@ from typing import List, Dict, Any
 import discord
 from pydantic import BaseModel
 
-from chatbot.assistants.student_interview_assistant import CourseAssistant
+from chatbot.assistants.course_assistant import CourseAssistant
+from chatbot.assistants.student_interview_assistant.student_interview_assistant import StudentInterviewAssistant
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
 
 logger = logging.getLogger(__name__)
@@ -27,11 +28,12 @@ class Chat(BaseModel):
         arbitrary_types_allowed = True
 
 
-def get_assistant(assistant_type: str):
-    if assistant_type == "default":
-        return CourseAssistant()
+def get_assistant(assistant_type: str, **kwargs):
+
     if assistant_type == "introduction":
-        return IntroductionAssistant()
+        return StudentInterviewAssistant(**kwargs)
+
+    return CourseAssistant(**kwargs)
 
 
 class ChatCog(discord.Cog):
@@ -61,7 +63,9 @@ class ChatCog(discord.Cog):
         await self._create_chat_thread(chat_title=chat_title,
                                        message_object=message_object,
                                        user_id=ctx.user.id,
-                                       user_name=ctx.user.name)
+                                       user_name=ctx.user.name,
+                                       assistant=CourseAssistant()
+                                       )
 
     @discord.Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
@@ -86,7 +90,7 @@ class ChatCog(discord.Cog):
                                            message_object=message,
                                            user_id=message.author.id,
                                            user_name=str(message.author),
-                                           assistant_type="default")
+                                           assistant=StudentInterviewAssistant())
 
         except Exception as e:
             print(f'Error: {e}')
@@ -147,11 +151,10 @@ class ChatCog(discord.Cog):
                                   message_object: discord.Message,
                                   user_id: int,
                                   user_name: str,
-                                  assistant_type: str = "default"):
+                                  assistant: Any):
 
         thread = await message_object.create_thread(name=chat_title)
 
-        assistant = get_assistant(assistant_type=assistant_type)
         chat = Chat(
             title=chat_title,
             owner={"id": user_id,

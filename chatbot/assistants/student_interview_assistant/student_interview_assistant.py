@@ -1,112 +1,130 @@
 import logging
 from typing import List, Type
 
+from dotenv import load_dotenv
 from langchain import PromptTemplate
 from langchain.chains import LLMChain
 from langchain.chat_models import ChatOpenAI
 from langchain.output_parsers import PydanticOutputParser, OutputFixingParser
 from pydantic import BaseModel
-from pymongo import MongoClient
 from pymongo.collection import Collection
 
-from chatbot.assistants.student_interview_assistant.prompt_templates.model_updater_prompt_template import MODEL_UPDATE_PROMPT_TEMPLATE
-from chatbot.assistants.student_interview_assistant.models import UpsertPayload, ModelUpdateResponse, ModelUpdatePayload, \
+from chatbot.assistants.student_interview_assistant.models import UpsertPayload, ModelUpdateResponse, \
+    ModelUpdatePayload, \
     StudentInterviewSchema, InterviewGuidance
-from chatbot.assistants.student_interview_assistant.prompt_templates.interview_guidance_prompt_template import INTERVIEW_GUIDANCE_PROMPT_TEMPLATE
+from chatbot.assistants.student_interview_assistant.student_interview_prompt_templates import \
+    INTERVIEW_GUIDANCE_PROMPT_TEMPLATE, MODEL_UPDATE_PROMPT_TEMPLATE
+from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
 
-logging.basicConfig(level=logging.INFO)
-
-from dotenv import load_dotenv
 load_dotenv()
 
-class ConversationAssistant:
-    def __init__(self):
+logger = logging.getLogger(__name__)
+
+
+class StudentInterviewAssistant:
+    def __init__(self,
+                 student_user_id: int,
+                 collection: Collection,
+                 initial_human_message: str = "Hello, let's get started!"):
+        self._student_user_id = student_user_id
+
+        self._collection = collection
+
+        self._previous_ai_question = 'Hello! Tell me a little about yourself.'
+        self._initial_human_message = initial_human_message
+
+        self._student_id_query = {'id': test_student_user_id}
+
+        self._current_student_model = self.retrieve_current_model(collection=self._collection,
+                                                                  query=self._student_id_query,
+                                                                  pydantic_model=StudentInterviewSchema)
+
         self._smart_llm = ChatOpenAI(model_name='gpt-4')
         self._not_as_smart_llm = ChatOpenAI(model_name='gpt-3.5-turbo')
 
-    def update_model(self, input_payload: ModelUpdatePayload) -> BaseModel:
+        self._configure_llms()
 
-        print(input_payload)
-        pydantic_class_constructor = input_payload.model.__class__
-
-        extractor_parser = PydanticOutputParser(pydantic_object=pydantic_class_constructor)
-
+    def _configure_llms(self):
+        pydantic_class_constructor = StudentInterviewSchema
+        self._extractor_parser = PydanticOutputParser(pydantic_object=pydantic_class_constructor)
         model_update_prompt = PromptTemplate(
             template=MODEL_UPDATE_PROMPT_TEMPLATE,
             input_variables=['current_model',
                              'ai_question',
                              'human_response'],
-            partial_variables={'format_instructions': extractor_parser.get_format_instructions()}
+            partial_variables={'format_instructions': self._extractor_parser.get_format_instructions()}
         )
-
-        extractor_chain = LLMChain(
+        self._extractor_chain = LLMChain(
             prompt=model_update_prompt,
-            llm=self._not_as_smart_llm
+            llm=self._smart_llm
         )
-
-        fixer = OutputFixingParser.from_llm(
+        self._output_fixing_parser = OutputFixingParser.from_llm(
             llm=self._not_as_smart_llm,
-            parser=extractor_parser
+            parser=self._extractor_parser
         )
-
-        raw_response = extractor_chain.predict(
-            ai_question=input_payload.ai_question,
-            human_response=input_payload.human_answer,
-            current_model=input_payload.model
-        )
-
-        updated_model = fixer.parse(
-            raw_response
-        )
-
-        return updated_model
-
-    def get_questions(self, current_model: BaseModel) -> List[str]:
-        interview_guidance_parser = PydanticOutputParser(pydantic_object=InterviewGuidance)
+        self._interview_guidance_parser = PydanticOutputParser(pydantic_object=InterviewGuidance)
 
         interview_guidance_prompt = PromptTemplate(
             template=INTERVIEW_GUIDANCE_PROMPT_TEMPLATE,
             input_variables=['current_model'],
-            partial_variables={'format_instructions': interview_guidance_parser.get_format_instructions()}
+            partial_variables={'format_instructions': self._interview_guidance_parser.get_format_instructions()}
         )
 
-        interview_guidance_chain = LLMChain(
+        self._interview_guidance_chain = LLMChain(
             prompt=interview_guidance_prompt,
             llm=self._smart_llm
         )
 
-        output_fixing_parser = OutputFixingParser.from_llm(
+        self._output_fixing_parser = OutputFixingParser.from_llm(
             llm=self._not_as_smart_llm,
-            parser=interview_guidance_parser
+            parser=self._interview_guidance_parser
         )
 
-        raw_response = interview_guidance_chain.predict(
+    def update_student_model(self, model_update_payload: ModelUpdatePayload) -> BaseModel:
+        logger.info(f"Updating student model for {self._student_user_id} with {model_update_payload}")
+
+        raw_response = self._extractor_chain.predict(
+            ai_question=model_update_payload.ai_question,
+            human_response=model_update_payload.human_answer,
+            current_model=model_update_payload.model
+        )
+
+        updated_student_model = self._output_fixing_parser.parse(
+            raw_response
+        )
+
+        return updated_student_model
+
+    def get_interview_questions(self, current_model: BaseModel) -> List[str]:
+        logger.info(f"Getting interview questions for {self._student_user_id} with {current_model}")
+        raw_response = self._interview_guidance_chain.predict(
             current_model=current_model
         )
 
-        question_list = output_fixing_parser.parse(
+        question_list = self._output_fixing_parser.parse(
             raw_response
         )
 
         return question_list.questions
 
-    def retrieve(self, collection: Collection, query, pydantic_model: Type[BaseModel]) -> BaseModel:
+    def retrieve_current_model(self, collection: Collection, query, pydantic_model: Type[BaseModel]) -> BaseModel:
         document = collection.find_one(query)
         return pydantic_model(**document) if document else pydantic_model()
-    def mongo_update(self, collection: Collection, query: dict, model: BaseModel):
+
+    def update_mongo(self, collection: Collection, query: dict, model: BaseModel):
         collection.update_one(query, {"$set": model.dict()}, upsert=True)
 
-    def handle_model_update(self, input: UpsertPayload) -> ModelUpdateResponse:
-
-        updated_model = self.update_model(ModelUpdatePayload(
-            ai_question=input.ai_question,
-            human_answer=input.human_answer,
-            model=input.model
+    def handle_model_update(self, upsert_payload: UpsertPayload) -> ModelUpdateResponse:
+        logger.info(f"Handling model update for {self._student_user_id} with {upsert_payload}")
+        updated_model = self.update_student_model(ModelUpdatePayload(
+            ai_question=upsert_payload.ai_question,
+            human_answer=upsert_payload.human_answer,
+            model=upsert_payload.model
         ))
 
-        new_questions = self.get_questions(updated_model)
+        self.update_mongo(upsert_payload.collection, upsert_payload.query, updated_model)
 
-        self.mongo_update(input.collection, input.query, updated_model)
+        new_questions = self.get_interview_questions(updated_model)
 
         output_payload = ModelUpdateResponse(
             questions=new_questions,
@@ -115,58 +133,53 @@ class ConversationAssistant:
 
         return output_payload
 
+    def _get_response(self, human_input: str):
+        logger.info(f"Getting response for {self._student_user_id} with input {human_input}")
+        upsert_payload = UpsertPayload(
+            ai_question=self._previous_ai_question,
+            human_answer=human_input,
+            collection=self._collection,
+            model=self._current_student_model,
+            query=self._student_id_query
+        )
+        model_update_response = self.handle_model_update(upsert_payload)
+        self._previous_ai_question = model_update_response.questions[0]
+        return self._previous_ai_question
+
+    def process_input(self, input_text):
+        print(f"Awaiting response (it's slow, be patient)...")
+        response = self._get_response(human_input=input_text)
+        return response
+
+    def demo(self, number_of_loops: int = 3):
+        from rich import print
+        print("Welcome to the Neural Control Assistant demo!")
+        print("You can ask questions or provide input related to the course.")
+        print("Type 'exit' to end the demo.\n")
+
+        for loop in range(number_of_loops):
+            print(f"=======\nLoop {loop + 1}:\n========\n")
+            print(f"\nCurrent Model:\n {self._current_student_model.dict()}\n--------\n")
+
+            print(self.process_input(input_text=self._initial_human_message))
+
+            input_text = input("Enter your input: ")
+
+            if input_text.strip().lower() == "exit":
+                print("Ending the demo. Goodbye!")
+                break
+
+            response = self.process_input(input_text)
+
+            print(f"Response: {response}")
+
+            print("\n")
+
 
 if __name__ == '__main__':
-    assistant = ConversationAssistant()
-
-    # Create a client instance
-    client = MongoClient("mongodb://localhost:27017/")
-
-    # Select a database
-    db = client["test"]
-
-    # Select a collection
-    collection = db["test"]
-
-    query = {
-        'id': '12345'
-    }
-
-    model = assistant.retrieve(collection, query, StudentInterviewSchema)
-
-    payload = UpsertPayload(
-        ai_question="Tell me a little about yourself",
-        human_answer="Hello! My name is Jon and I'm the prof of this here server. I love to study and teach about the neural control of human movement in the real world. I'm especially interested in eye tracking, musculoskeletal biomechanics, and robotics 🧠  🤖 ✨ In this course, I hope to learn about how to manage a course based that teaches students how to conduct technical, collaborative research projects using the decentralized project management methods from the free-open-source software (FOSS) community",
-        collection=collection,
-        model=model,
-        query=query
-    )
-
-    payloads = {}
-    payloads[0] = payload
-
-    loop = 5
-    for loop_index in range(loop):
-        print(f'------loop index: {loop_index}------\n')
-
-        model_update_response = assistant.handle_model_update(payloads[loop_index])
-
-        print(f'\n--Updated model: {model_update_response.model.dict()}--\n')
-
-        print(f'new questions: {model_update_response.questions}-\n')
-
-        print(f"Asking question: {model_update_response.questions[0]}-\n")
-
-        human_answer = input("Human answer: ")
-
-        payloads[loop_index + 1] = UpsertPayload(
-            ai_question=model_update_response.questions[0],
-            human_answer=human_answer,
-            collection=collection,
-            model=model_update_response.model,
-            query=query
-        )
-
-    best_guess_model = model_update_response.model
-
-    print(f"=========\n+++++++++++\n==========\nBest guess model:\n {best_guess_model}\n==========\n+++++++++++\n==========\n")
+    test_student_user_id = 1111
+    collection_name_in = "test_student_interview_assistant"
+    assistant = StudentInterviewAssistant(student_user_id=test_student_user_id,
+                                          collection=MongoDatabaseManager().get_collection(collection_name_in),
+                                          )
+    assistant.demo()

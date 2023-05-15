@@ -68,7 +68,9 @@ COURSE_ASSISTANT_SYSTEM_TEMPLATE = """
 
 
 class CourseAssistant:
-    def __init__(self, temperature=0.8, model_name="gpt-4"):
+    def __init__(self,
+                 temperature=0.8,
+                 model_name="gpt-4"):
         load_dotenv()
         self._chat_llm = ChatOpenAI(
             streaming=True,
