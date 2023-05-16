@@ -24,18 +24,22 @@ class DiscordBot(discord.Bot):
     @discord.Cog.listener()
     async def on_message(self, message):
         logger.info(f"Received message: {message.content}")
-        self.mongo_database.insert('messages', {
-            'author': str(message.author),
-            'author_id': message.author.id,
-            'user_id': message.author.id,
-            'content': message.content,
-            'timestamp': message.created_at.isoformat(),
-            'guild': message.guild.name if message.guild else 'DM',
-            'channel': message.channel.name,
-            'jump_url': message.jump_url,
-            'thread': message.thread if message.thread else 'None',
-            'dump': str(message)
-        })
+        self.mongo_database.upsert(
+            collection=f"server_{message.guild.name}_messages",
+            query={"server_name": message.guild.name},
+            data={
+                'author': str(message.author),
+                'author_id': message.author.id,
+                'user_id': message.author.id,
+                'content': message.content,
+                'timestamp': message.created_at.isoformat(),
+                'guild': message.guild.name if message.guild else 'DM',
+                'channel': message.channel.name,
+                'jump_url': message.jump_url,
+                'thread': message.thread if message.thread else 'None',
+                'dump': str(message)
+            },
+        )
 
     @discord.slash_command(name="hello", description="Say hello to the bot")
     async def hello(self, ctx):

@@ -1,19 +1,21 @@
-import uuid
+from datetime import datetime
 
 from dotenv import load_dotenv
+
+load_dotenv()
 from langchain import LLMChain, OpenAI
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.chains.summarize import load_summarize_chain
 from langchain.chat_models import ChatOpenAI
-from langchain.memory import ConversationBufferMemory, MongoDBChatMessageHistory
+from langchain.memory import ConversationBufferMemory
 from langchain.prompts import (
     SystemMessagePromptTemplate,
     HumanMessagePromptTemplate,
     ChatPromptTemplate,
 )
+from pymongo.collection import Collection
 
-from chatbot.mongo_database.mongo_database_manager import get_mongo_uri, get_mongo_chat_history_collection_name, \
-    get_mongo_database_name
+from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
 
 COURSE_ASSISTANT_SYSTEM_TEMPLATE = """
 
@@ -75,10 +77,14 @@ COURSE_ASSISTANT_SYSTEM_TEMPLATE = """
 
 class CourseAssistant:
     def __init__(self,
+                 mongo_collection: Collection,
                  temperature=0.8,
                  model_name="gpt-4",
-                 friend_to: str = "test_student"):
-        load_dotenv()
+                 student_id: str = "test_student",
+                 session_id: str = f"test_session_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
+                 ):
+
+        self._mongo_collection = mongo_collection
         self._chat_llm = ChatOpenAI(
             streaming=True,
             callbacks=[StreamingStdOutCallbackHandler()],
@@ -86,22 +92,25 @@ class CourseAssistant:
             model_name=model_name,
         )
 
-        self._friend_to = friend_to
+        self._student_id = student_id
+        self._session_id = session_id
 
         self._chat_prompt = self._create_chat_prompt()
         self._chat_memory = self._configure_chat_memory()
-        self._database_memory = self._configure_database_memory()
+        self._mongo_query = {"student_id": self._student_id,
+                             "session_id": self._session_id}
+
         self._chain = self._create_llm_chain()
 
         self._summarize_chain = load_summarize_chain(llm=OpenAI(temperature=0),
                                                      chain_type="refine")
 
     def _configure_chat_memory(self):
-
         return ConversationBufferMemory(memory_key="chat_history")
 
     def _create_llm_chain(self):
-
+        self._update_chat_history(role="system",
+                                  input_text=COURSE_ASSISTANT_SYSTEM_TEMPLATE)
         return LLMChain(llm=self._chat_llm,
                         prompt=self._chat_prompt,
                         memory=self._chat_memory,
@@ -109,7 +118,7 @@ class CourseAssistant:
                         )
 
     def _create_chat_prompt(self):
-        system_message_prompt = SystemMessagePromptTemplate.from_template(
+        self._system_message_prompt = SystemMessagePromptTemplate.from_template(
             COURSE_ASSISTANT_SYSTEM_TEMPLATE
         )
         human_template = "{human_input}"
@@ -118,32 +127,58 @@ class CourseAssistant:
         )
 
         chat_prompt = ChatPromptTemplate.from_messages(
-            [system_message_prompt, human_message_prompt]
+            [self._system_message_prompt, human_message_prompt]
         )
+
         return chat_prompt
 
     def process_input(self, input_text):
         print(f"Input: {input_text}")
         print("Streaming response...\n")
 
-        self._database_memory.add_user_message(input_text)
-        response = self._chain.run(human_input=input_text)
-        self._database_memory.add_ai_message(response)
+        self._update_chat_history(role="user",
+                                  input_text=input_text)
+
+        ai_response = self._chain.run(human_input=input_text)
+        self._update_chat_history(role="assistant",
+                                  input_text=ai_response)
 
         self._run_summarizer_chain()
 
-        return response
+        return ai_response
+
+    def _update_chat_history(self, role: str,
+                             input_text: str):
+        self._mongo_collection.update_one(self._mongo_query,
+                                          {"$push": {"messages": {"role": role,
+                                                                  "content": input_text,
+                                                                  "timestamp": datetime.now().isoformat(),
+                                                                  }
+                                                     }
+                                           },
+                                          upsert=True)
 
     def _run_summarizer_chain(self, number_of_messages_to_summarize=5):
+        return
+        # recent_messages = self._get_recent_messages(number_of_messages_to_summarize=number_of_messages_to_summarize)
+        #
+        # self._chat_summary = self._summarize_chain.run(recent_messages)
+        #
+        # self._update_chat_summary_in_database()
+        # print(f"Chat summary for messages: \n "
+        #       f"{recent_messages},\n"
+        #       f"Summary: \n"
+        #       f"{self._chat_summary}")
 
-        number_of_recent_messages = min(number_of_messages_to_summarize, len(self._database_memory.messages))
-
-        recent_messages = self._database_memory.messages[-number_of_recent_messages:]
-        self._chat_summary = self._summarize_chain.run(recent_messages)
-        print(f"Chat summary for messages: \n "
-              f"{recent_messages},\n"
-              f"Summary: \n"
-              f"{self._chat_summary}")
+    def _get_recent_messages(self, number_of_messages_to_summarize: int = 5):
+        messages = self._mongo_collection.find(self._mongo_query,
+                                               projection={"messages"})
+        for document in messages:
+            messages = document['messages']
+        number_of_messages_to_summarize = min(number_of_messages_to_summarize, len(messages))
+        recent_messages = messages[-number_of_messages_to_summarize:]
+        recent_messages = [message for message in recent_messages if not message["role"] == "system"]
+        return recent_messages
 
     async def async_process_input(self, input_text):
         print(f"Input: {input_text}")
@@ -167,19 +202,12 @@ class CourseAssistant:
 
             print("\n")
 
-    def _configure_database_memory(self):
-        try:
-            return MongoDBChatMessageHistory(
-                connection_string=get_mongo_uri(),
-                session_id=uuid.uuid4().hex,
-                database_name=get_mongo_database_name(),
-                collection_name=get_mongo_chat_history_collection_name(),
-            )
-        except Exception as e:
-            print(f"Error connecting to MongoDB: {e}")
-            raise e
+    def _update_chat_summary_in_database(self):
+        self._mongo_collection.update_one(self._mongo_query,
+                                          {"$set": {"chat_summary": self._chat_summary}},
+                                          upsert=True)
 
 
 if __name__ == "__main__":
-    assistant = CourseAssistant()
+    assistant = CourseAssistant(mongo_collection=MongoDatabaseManager().get_collection("test_collection"))
     assistant.demo()

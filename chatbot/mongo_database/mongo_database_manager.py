@@ -3,7 +3,8 @@ from datetime import datetime
 
 from pymongo import MongoClient
 
-
+from dotenv import load_dotenv
+load_dotenv()
 def get_mongo_uri() -> str:
     is_docker = os.getenv('IS_DOCKER', False)
     if is_docker:
@@ -25,6 +26,7 @@ class MongoDatabaseManager:
         return self._database[collection_name]
     def insert(self, collection, document):
         return self._database[collection].insert_one(document)
+
 
     def upsert(self, collection, query, data):
         return self._database[collection].update_one(query, data, upsert=True)
