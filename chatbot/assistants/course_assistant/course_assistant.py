@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime
 
 from dotenv import load_dotenv
@@ -5,10 +6,10 @@ from dotenv import load_dotenv
 from chatbot.assistants.course_assistant.course_assistant_prompt import COURSE_ASSISTANT_SYSTEM_TEMPLATE
 
 load_dotenv()
-from langchain import LLMChain
+from langchain import LLMChain, OpenAI
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.chat_models import ChatOpenAI
-from langchain.memory import ConversationBufferMemory
+from langchain.memory import ConversationSummaryBufferMemory
 from langchain.prompts import (
     SystemMessagePromptTemplate,
     HumanMessagePromptTemplate,
@@ -42,10 +43,15 @@ class CourseAssistant:
 
         self._chain = self._create_llm_chain()
 
+    @property
+    def conversation_summary(self):
+        return self._chat_memory.moving_summary_buffer
 
     def _configure_chat_memory(self):
-
-        return ConversationBufferMemory(memory_key="chat_history")
+        # return ConversationBufferMemory(memory_key="chat_history")
+        return ConversationSummaryBufferMemory(memory_key="chat_history",
+                                               llm=OpenAI(),
+                                               max_token_limit=50)
 
     def _create_llm_chain(self):
         self._update_chat_history(role="system",
@@ -71,6 +77,21 @@ class CourseAssistant:
 
         return chat_prompt
 
+    def _update_chat_memory(self):
+        try:
+            update_operation = {
+                "$set": {
+                    "chat_memory.conversation_summary": self.conversation_summary,
+                    "chat_memory.message_buffer": [
+                        message.dict() for message in self._chat_memory.chat_memory.messages
+                    ],
+                },
+            }
+            self._mongo_collection.update_one(self._mongo_query, update_operation, upsert=True)
+
+        except Exception as e:
+            print(f"Error updating chat memory: {e}")
+
     def _update_chat_history(self, role: str,
                              input_text: str):
         try:
@@ -85,18 +106,6 @@ class CourseAssistant:
         except Exception as e:
             print(f"Error updating chat history: {e}")
 
-    def process_input(self, input_text):
-        print(f"Input: {input_text}")
-        print("Streaming response...\n")
-
-        self._update_chat_history(role="user",
-                                  input_text=input_text)
-
-        ai_response = self._chain.run(human_input=input_text)
-        self._update_chat_history(role="assistant",
-                                  input_text=ai_response)
-        return ai_response
-
     async def async_process_input(self, input_text):
         print(f"Input: {input_text}")
         print("Streaming response...\n")
@@ -106,10 +115,10 @@ class CourseAssistant:
         ai_response = await self._chain.arun(human_input=input_text)
         self._update_chat_history(role="assistant",
                                   input_text=ai_response)
-
+        self._update_chat_memory()
         return ai_response
 
-    def demo(self):
+    async def demo(self):
         print("Welcome to the Neural Control Assistant demo!")
         print("You can ask questions or provide input related to the course.")
         print("Type 'exit' to end the demo.\n")
@@ -121,11 +130,11 @@ class CourseAssistant:
                 print("Ending the demo. Goodbye!")
                 break
 
-            response = self.process_input(input_text)
+            response = await self.async_process_input(input_text)
 
             print("\n")
 
 
 if __name__ == "__main__":
     assistant = CourseAssistant(mongo_collection=MongoDatabaseManager().get_collection("test_collection"))
-    assistant.demo()
+    asyncio.run(assistant.demo())

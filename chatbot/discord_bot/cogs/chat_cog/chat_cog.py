@@ -63,7 +63,6 @@ class ChatCog(discord.Cog):
                                        message_object=message_object,
                                        user_id=ctx.user.id,
                                        user_name=ctx.user.name,
-
                                        )
 
     @discord.Cog.listener()
@@ -118,20 +117,16 @@ class ChatCog(discord.Cog):
         try:
             chat = self._active_threads[message.channel.id]
         except KeyError:
-            chat = await self._create_chat(chat_title=message.channel.name,
-                                           thread=message.channel,
-                                           user_id=message.author.id,
-                                           user_name=str(message.author),
-                                           server_id=message.guild.id,
-                                           server_name=message.guild.name)
+            chat = await self._create_chat(thread=message.channel,
+                                           mongo_query=self._get_mongo_query(message))
 
         logger.info(f"Sending message to the agent: {message.content}")
 
         await self._async_send_message_to_bot(chat=chat, input_text=message.content)
 
     async def _async_send_message_to_bot(self, chat: Chat, input_text: str):
+        response_message = await chat.thread.send("`Awaiting bot response...`")
         try:
-            response_message = await chat.thread.send("`Awaiting bot response...`")
 
             async with response_message.channel.typing():
                 bot_response = await chat.assistant.async_process_input(input_text=input_text)
@@ -140,6 +135,7 @@ class ChatCog(discord.Cog):
 
         except Exception as e:
             logger.error(e)
+            await response_message.edit(content=f"Oh no, something went wrong! \nHere is the error:\n ```\n{e}\n```")
 
     def _create_chat_title_string(self, user_name: str) -> str:
         return f"{user_name}'s chat with {self._discord_bot.user.name}"
@@ -167,7 +163,7 @@ class ChatCog(discord.Cog):
         self._active_threads[chat.thread.id] = chat
 
         await chat.thread.send(f"Beginning chat with initial message: \n"
-                               f"```\n{initial_message}\n```")
+                               f"```\n{initial_message}\n```\n------------------")
 
         await self._async_send_message_to_bot(chat=chat, input_text=initial_message)
 
