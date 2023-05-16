@@ -7,7 +7,7 @@ from typing import List, Dict, Any
 import discord
 from pydantic import BaseModel
 
-from chatbot.assistants.course_assistant import CourseAssistant
+from chatbot.assistants.course_assistant.course_assistant import CourseAssistant
 from chatbot.assistants.student_interview_assistant.student_interview_assistant import StudentInterviewAssistant
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
 
@@ -89,7 +89,8 @@ class ChatCog(discord.Cog):
                                            message_object=message,
                                            user_id=message.author.id,
                                            user_name=str(message.author),
-                                           assistant=StudentInterviewAssistant())
+                                           initial_message=message.content
+                                           )
 
         except Exception as e:
             print(f'Error: {e}')
@@ -106,7 +107,7 @@ class ChatCog(discord.Cog):
         if not message.channel.__class__ == discord.Thread:
             return
 
-        #only respond to messages in threads we've seen before
+        # only respond to messages in threads we've seen before
         query_response = self._mongo_database.chat_history_collection.find_one({"thread_id": message.channel.id})
         if not query_response:
             return
@@ -120,29 +121,22 @@ class ChatCog(discord.Cog):
             chat = await self._create_chat(chat_title=message.channel.name,
                                            thread=message.channel,
                                            user_id=message.author.id,
-                                           user_name=str(message.author))
-
-        # self._mongo_database.upsert(collection="chat_logs",
-        #                             query={"user_id": message.author.id,
-        #                                    "thread_id": message.channel.id,
-        #                                    },
-        #                             data={"$push": {"messages": {"human_message": message.content}}})
+                                           user_name=str(message.author),
+                                           server_id=message.guild.id,
+                                           server_name=message.guild.name)
 
         logger.info(f"Sending message to the agent: {message.content}")
 
+        await self._async_send_message_to_bot(chat=chat, input_text=message.content)
+
+    async def _async_send_message_to_bot(self, chat: Chat, input_text: str):
         try:
             response_message = await chat.thread.send("`Awaiting bot response...`")
 
             async with response_message.channel.typing():
-                bot_response = await chat.assistant.async_process_input(input_text=message.content)
+                bot_response = await chat.assistant.async_process_input(input_text=input_text)
 
             await response_message.edit(content=bot_response)
-            # self._mongo_database.upsert(collection="chat_logs",
-            #                             query={"user_id": message.author.id,
-            #                                    "thread_id": message.channel.id,
-            #                                    "thread_title": chat.title,
-            #                                    "start_time": chat.started_at},
-            #                             data={"$push": {"messages": {"ai_response": bot_response}}})
 
         except Exception as e:
             logger.error(e)
@@ -155,26 +149,45 @@ class ChatCog(discord.Cog):
                                   message_object: discord.Message,
                                   user_id: int,
                                   user_name: str,
+                                  initial_message: str = "A human has requested a chat, say hello!"
                                   ):
 
         thread = await message_object.create_thread(name=chat_title)
 
-        chat = await self._create_chat(chat_title, thread, user_id, user_name)
+        chat = await self._create_chat(chat_title=chat_title,
+                                       thread=thread,
+                                       user_id=user_id,
+                                       user_name=user_name,
+                                       server_id=message_object.guild.id,
+                                       server_name=message_object.guild.name)
 
         await chat.thread.send(f"<@{user_id}> is the thread owner.")
         await chat.thread.send(f"The bot is ready to chat! "
                                f"\n(bot ignores messages starting with ~)")
         self._active_threads[chat.thread.id] = chat
 
-    async def _create_chat(self, chat_title, thread, user_id, user_name):
+        await chat.thread.send(f"Beginning chat with initial message: \n"
+                               f"```\n{initial_message}\n```")
+
+        await self._async_send_message_to_bot(chat=chat, input_text=initial_message)
+
+    async def _create_chat(self,
+                           chat_title: str,
+                           thread: discord.Thread,
+                           user_id: int,
+                           user_name: str,
+                           server_id: int,
+                           server_name: str):
         chat = Chat(
             title=chat_title,
             owner={"id": user_id,
                    "name": user_name},
             thread=thread,
             assistant=CourseAssistant(mongo_collection=self._mongo_database.chat_history_collection,
-                                      mongo_query={"student_id": user_id,
-                                                   "student_name": user_name,
+                                      mongo_query={"user_id": user_id,
+                                                   "user_name": user_name,
+                                                   "server_name": server_name,
+                                                   "server_id": server_id,
                                                    "thread_id": thread.id,
                                                    "thread_title": chat_title,
                                                    "start_time": datetime.now().isoformat()

@@ -1,36 +1,48 @@
 import os
 from datetime import datetime
 
+from dotenv import load_dotenv
 from pymongo import MongoClient
 
-from dotenv import load_dotenv
 load_dotenv()
+
+
 def get_mongo_uri() -> str:
     is_docker = os.getenv('IS_DOCKER', False)
     if is_docker:
         return os.getenv('MONGO_URI_DOCKER')
     else:
         return os.getenv('MONGO_URI_LOCAL')
+
+
 def get_mongo_database_name():
     return os.getenv('MONGODB_DATABASE_NAME')
+
 
 def get_mongo_chat_history_collection_name():
     return os.getenv('MONGODB_CHAT_HISTORY_COLLECTION_NAME')
 
-class MongoDatabaseManager:
-    def __init__(self,):
 
+TEST_MONGO_QUERY = {"student_id": "test_student",
+                    "student_name": "test_student_name",
+                    "thread_title": "test_thread_title",
+                    "thread_id": f"test_session_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"}
+
+
+class MongoDatabaseManager:
+    def __init__(self, ):
         self._client = MongoClient(get_mongo_uri())
         self._database = self._client.get_default_database(get_mongo_database_name())
 
     @property
     def chat_history_collection(self):
         return self._database[get_mongo_chat_history_collection_name()]
+
     def get_collection(self, collection_name: str):
         return self._database[collection_name]
+
     def insert(self, collection, document):
         return self._database[collection].insert_one(document)
-
 
     def upsert(self, collection, query, data):
         return self._database[collection].update_one(query, data, upsert=True)
@@ -41,7 +53,7 @@ class MongoDatabaseManager:
 
 if __name__ == "__main__":
     # Replace 'your_mongodb_uri' with your actual MongoDB URI
-    mongodb_manager = MongoDatabaseManager('mongodb://localhost:27017') #run locally
+    mongodb_manager = MongoDatabaseManager('mongodb://localhost:27017')  # run locally
 
     test_document = {
         'name': 'Test',
