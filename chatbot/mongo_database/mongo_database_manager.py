@@ -19,9 +19,13 @@ def get_mongo_chat_history_collection_name():
 
 class MongoDatabaseManager:
     def __init__(self,):
+
         self._client = MongoClient(get_mongo_uri())
         self._database = self._client.get_default_database(get_mongo_database_name())
 
+    @property
+    def chat_history_collection(self):
+        return self._database[get_mongo_chat_history_collection_name()]
     def get_collection(self, collection_name: str):
         return self._database[collection_name]
     def insert(self, collection, document):

@@ -29,7 +29,6 @@ class Chat(BaseModel):
 
 
 def get_assistant(assistant_type: str, **kwargs):
-
     if assistant_type == "introduction":
         return StudentInterviewAssistant(**kwargs)
 
@@ -64,7 +63,7 @@ class ChatCog(discord.Cog):
                                        message_object=message_object,
                                        user_id=ctx.user.id,
                                        user_name=ctx.user.name,
-                                       assistant=CourseAssistant()
+
                                        )
 
     @discord.Cog.listener()
@@ -107,22 +106,27 @@ class ChatCog(discord.Cog):
         if not message.channel.__class__ == discord.Thread:
             return
 
-        if not message.channel.id in list(self._active_threads.keys()):
+        #only respond to messages in threads we've seen before
+        query_response = self._mongo_database.chat_history_collection.find_one({"thread_id": message.channel.id})
+        if not query_response:
             return
-
         # ignore if first character is ~
         if message.content[0] == "~":
             return
 
-        chat = self._active_threads[message.channel.id]
+        try:
+            chat = self._active_threads[message.channel.id]
+        except KeyError:
+            chat = await self._create_chat(chat_title=message.channel.name,
+                                           thread=message.channel,
+                                           user_id=message.author.id,
+                                           user_name=str(message.author))
 
-        self._mongo_database.upsert(collection="chat_logs",
-                                    query={"user_id": message.author.id,
-                                           "thread_id": message.channel.id,
-                                           "thread_title": chat.title,
-                                           "start_time": chat.started_at
-                                           },
-                                    data={"$push": {"messages": {"human_message": message.content}}})
+        # self._mongo_database.upsert(collection="chat_logs",
+        #                             query={"user_id": message.author.id,
+        #                                    "thread_id": message.channel.id,
+        #                                    },
+        #                             data={"$push": {"messages": {"human_message": message.content}}})
 
         logger.info(f"Sending message to the agent: {message.content}")
 
@@ -133,12 +137,12 @@ class ChatCog(discord.Cog):
                 bot_response = await chat.assistant.async_process_input(input_text=message.content)
 
             await response_message.edit(content=bot_response)
-            self._mongo_database.upsert(collection="chat_logs",
-                                        query={"user_id": message.author.id,
-                                               "thread_id": message.channel.id,
-                                               "thread_title": chat.title,
-                                               "start_time": chat.started_at},
-                                        data={"$push": {"messages": {"ai_response": bot_response}}})
+            # self._mongo_database.upsert(collection="chat_logs",
+            #                             query={"user_id": message.author.id,
+            #                                    "thread_id": message.channel.id,
+            #                                    "thread_title": chat.title,
+            #                                    "start_time": chat.started_at},
+            #                             data={"$push": {"messages": {"ai_response": bot_response}}})
 
         except Exception as e:
             logger.error(e)
@@ -151,22 +155,34 @@ class ChatCog(discord.Cog):
                                   message_object: discord.Message,
                                   user_id: int,
                                   user_name: str,
-                                  assistant: Any):
+                                  ):
 
         thread = await message_object.create_thread(name=chat_title)
 
-        chat = Chat(
-            title=chat_title,
-            owner={"id": user_id,
-                   "name": user_name},
-            thread=thread,
-            assistant=assistant
-        )
+        chat = await self._create_chat(chat_title, thread, user_id, user_name)
 
         await chat.thread.send(f"<@{user_id}> is the thread owner.")
         await chat.thread.send(f"The bot is ready to chat! "
                                f"\n(bot ignores messages starting with ~)")
         self._active_threads[chat.thread.id] = chat
+
+    async def _create_chat(self, chat_title, thread, user_id, user_name):
+        chat = Chat(
+            title=chat_title,
+            owner={"id": user_id,
+                   "name": user_name},
+            thread=thread,
+            assistant=CourseAssistant(mongo_collection=self._mongo_database.chat_history_collection,
+                                      mongo_query={"student_id": user_id,
+                                                   "student_name": user_name,
+                                                   "thread_id": thread.id,
+                                                   "thread_title": chat_title,
+                                                   "start_time": datetime.now().isoformat()
+                                                   }
+
+                                      )
+        )
+        return chat
 
     async def _make_title_card_embed(self, user_name: str, chat_title: str):
         return discord.Embed(

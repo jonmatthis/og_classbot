@@ -5,8 +5,6 @@ services:
     build: .
     environment:
       - IS_DOCKER=1
-    ports:
-      - "1123:1123"
     depends_on:
       - mongodb
 
@@ -16,7 +14,7 @@ services:
     volumes:
       - mongodb_data:/data/db
     ports:
-      - "27017:27017"
+      - "27018:27017"
 
 volumes:
   mongodb_data:

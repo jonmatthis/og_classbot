@@ -27,7 +27,7 @@ class DiscordBot(discord.Bot):
         self.mongo_database.upsert(
             collection=f"server_{message.guild.name}_messages",
             query={"server_name": message.guild.name},
-            data={
+            data={"$push": {"messages": {
                 'author': str(message.author),
                 'author_id': message.author.id,
                 'user_id': message.author.id,
@@ -38,7 +38,7 @@ class DiscordBot(discord.Bot):
                 'jump_url': message.jump_url,
                 'thread': message.thread if message.thread else 'None',
                 'dump': str(message)
-            },
+            }}}
         )
 
     @discord.slash_command(name="hello", description="Say hello to the bot")
