@@ -7,7 +7,7 @@ services:
       - IS_DOCKER=1
     depends_on:
       - mongodb
-
+    restart: always
 
   mongodb:
     image: mongo:latest
@@ -15,6 +15,7 @@ services:
       - mongodb_data:/data/db
     ports:
       - "27018:27017"
+    restart: always
 
 volumes:
   mongodb_data:
