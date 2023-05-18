@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from chatbot.assistants.course_assistant.course_assistant import CourseAssistant
 from chatbot.assistants.student_interview_assistant.student_interview_assistant import StudentInterviewAssistant
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
+from chatbot.system.environment_variables import get_admin_users
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +78,7 @@ class ChatCog(discord.Cog):
                 return
 
             # Make sure we're only responding to the admin users
-            if not payload.user_id == int(os.getenv('ADMIN_USER_IDS')):
+            if not payload.user_id in get_admin_users():
                 return
 
             # Get the channel and message using the payload
