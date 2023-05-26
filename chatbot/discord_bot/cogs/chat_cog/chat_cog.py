@@ -38,9 +38,9 @@ def get_assistant(assistant_type: str, **kwargs):
 
 class ChatCog(discord.Cog):
     def __init__(self,
-                 discord_bot: discord.Bot,
+                 bot: discord.Bot,
                  mongo_database: MongoDatabaseManager):
-        self._discord_bot = discord_bot
+        self._discord_bot = bot
         self._mongo_database = mongo_database
         self._active_threads = {}
         self._allowed_channels = os.getenv("ALLOWED_CHANNELS").split(",")
@@ -52,6 +52,7 @@ class ChatCog(discord.Cog):
                    ctx: discord.ApplicationContext):
 
         if not ctx.channel.id in self._allowed_channels:
+            logger.info(f"Channel {ctx.channel.id} is not allowed to start a chat")
             return
 
         chat_title = self._create_chat_title_string(str(ctx.user))
@@ -79,6 +80,7 @@ class ChatCog(discord.Cog):
 
             # Make sure we're only responding to the admin users
             if not payload.user_id in get_admin_users():
+                logger.info(f"User {payload.user_id} is not an admin user")
                 return
 
             # Get the channel and message using the payload
