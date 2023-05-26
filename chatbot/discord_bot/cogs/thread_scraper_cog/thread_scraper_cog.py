@@ -21,6 +21,8 @@ class ThreadScraperCog(commands.Cog):
             logger.info(f"User {ctx.user_id} is not an admin user")
             return
         channels = await ctx.guild.fetch_channels()
+        # Initialize counter
+        saved_thread_counter = 0
         for channel in channels:
             if isinstance(channel, discord.TextChannel):  # If this is a text channel
                 for thread in channel.threads:  # Loop through each thread
@@ -46,3 +48,7 @@ class ThreadScraperCog(commands.Cog):
                                 'dump': str(message)
                             }}}
                         )
+                    saved_thread_counter += 1
+        # Send stats in a direct message
+        dm_channel = await self.bot.create_dm(ctx.user)
+        await dm_channel.send(f"Scraped {saved_thread_counter} threads successfully.")
