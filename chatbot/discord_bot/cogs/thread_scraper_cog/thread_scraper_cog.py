@@ -80,3 +80,4 @@ class ThreadScraperCog(commands.Cog):
                                 }
                             }
                         )
+        logger.info("Done scraping threads!!")

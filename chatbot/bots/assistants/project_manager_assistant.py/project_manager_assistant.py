@@ -13,7 +13,7 @@ from chatbot.bots.workers.student_profile_builder.models import UpsertPayload, M
     ModelUpdatePayload, \
     StudentInterviewSchema, InterviewGuidance
 from chatbot.bots.workers.student_profile_builder.student_profile_builder_prompt import \
-    INTERVIEW_GUIDANCE_PROMPT_TEMPLATE, MODEL_UPDATE_PROMPT_TEMPLATE
+    INTERVIEW_GUIDANCE_PROMPT_TEMPLATE, STUDENT_PROFILE_UPDATE_PROMPT_TEMPLATE
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
 
 load_dotenv()
@@ -48,7 +48,7 @@ class StudentInterviewAssistant:
         pydantic_class_constructor = StudentInterviewSchema
         self._extractor_parser = PydanticOutputParser(pydantic_object=pydantic_class_constructor)
         model_update_prompt = PromptTemplate(
-            template=MODEL_UPDATE_PROMPT_TEMPLATE,
+            template=STUDENT_PROFILE_UPDATE_PROMPT_TEMPLATE,
             input_variables=['current_model',
                              'ai_question',
                              'human_response'],

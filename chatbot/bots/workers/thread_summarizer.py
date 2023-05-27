@@ -9,14 +9,13 @@ class ThreadSummarizer:
         self.thread_as_string = "\n".join(str(message) for message in thread_data)
 
         prompt = PromptTemplate(
-            template="Provide an extensive and detailed summary and analysis of the following thread. Pull out themes and topics, especially those related to the human's background and interests. "
+            template="Provide an detailed summary of the following thread."
+                     "(NOTE - Keep in mind that sometimes a conversation will involve a student trying to poke at the boundaries of the AI models's knowledge and security. In this case, we consider that as evidence of interest in AI and Large Language Models(llms)!"
                      ":\n\n{thread}"
                      "\n\nSUMMARY:",
             input_variables=["thread"])
 
-        self.chain = LLMChain(llm=OpenAI(model_name="gpt-4",
-                                         temperature=0,
-                                         max_tokens=-1),
+        self.chain = LLMChain(llm=OpenAI(temperature=0),
                               prompt=prompt,
                               verbose=True)
 
