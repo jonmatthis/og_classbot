@@ -3,7 +3,7 @@ from datetime import datetime
 
 from dotenv import load_dotenv
 
-from chatbot.assistants.course_assistant.course_assistant_prompt import COURSE_ASSISTANT_SYSTEM_TEMPLATE
+from chatbot.bots.assistants.course_assistant.course_assistant_prompt import COURSE_ASSISTANT_SYSTEM_TEMPLATE
 
 load_dotenv()
 from langchain import LLMChain, OpenAI

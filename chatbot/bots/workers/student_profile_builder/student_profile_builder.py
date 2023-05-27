@@ -9,11 +9,11 @@ from langchain.output_parsers import PydanticOutputParser, OutputFixingParser
 from pydantic import BaseModel
 from pymongo.collection import Collection
 
-from chatbot.assistants.student_interview_assistant.models import UpsertPayload, ModelUpdateResponse, \
+from chatbot.bots.workers.student_profile_builder.models import UpsertPayload, ModelUpdateResponse, \
     ModelUpdatePayload, \
     StudentInterviewSchema, InterviewGuidance
-from chatbot.assistants.student_interview_assistant.student_interview_prompt_templates import \
-    INTERVIEW_GUIDANCE_PROMPT_TEMPLATE, MODEL_UPDATE_PROMPT_TEMPLATE
+from chatbot.bots.workers.student_profile_builder.student_profile_builder_prompt import MODEL_UPDATE_PROMPT_TEMPLATE, \
+    STUDENT_PROFILE_BUILDER_PROMPT
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
 
 load_dotenv()
@@ -21,7 +21,7 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 
-class StudentInterviewAssistant:
+class StudentProfileBuilder:
     def __init__(self,
                  student_user_id: int,
                  collection: Collection,
@@ -65,7 +65,7 @@ class StudentInterviewAssistant:
         self._interview_guidance_parser = PydanticOutputParser(pydantic_object=InterviewGuidance)
 
         interview_guidance_prompt = PromptTemplate(
-            template=INTERVIEW_GUIDANCE_PROMPT_TEMPLATE,
+            template=STUDENT_PROFILE_BUILDER_PROMPT,
             input_variables=['current_model'],
             partial_variables={'format_instructions': self._interview_guidance_parser.get_format_instructions()}
         )
@@ -179,7 +179,7 @@ class StudentInterviewAssistant:
 if __name__ == '__main__':
     test_student_user_id = 1111
     collection_name_in = "test_student_interview_assistant"
-    assistant = StudentInterviewAssistant(student_user_id=test_student_user_id,
-                                          collection=MongoDatabaseManager().get_collection(collection_name_in),
-                                          )
+    assistant = StudentProfileBuilder(student_user_id=test_student_user_id,
+                                      collection=MongoDatabaseManager().get_collection(collection_name_in),
+                                      )
     assistant.demo()

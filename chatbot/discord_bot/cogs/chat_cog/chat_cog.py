@@ -7,8 +7,8 @@ from typing import List, Dict, Any
 import discord
 from pydantic import BaseModel
 
-from chatbot.assistants.course_assistant.course_assistant import CourseAssistant
-from chatbot.assistants.student_interview_assistant.student_interview_assistant import StudentInterviewAssistant
+from chatbot.bots.assistants.course_assistant.course_assistant import CourseAssistant
+from chatbot.bots.workers.student_profile_builder.student_profile_builder import StudentProfileBuilder
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
 from chatbot.system.environment_variables import get_admin_users
 
@@ -31,7 +31,7 @@ class Chat(BaseModel):
 
 def get_assistant(assistant_type: str, **kwargs):
     if assistant_type == "introduction":
-        return StudentInterviewAssistant(**kwargs)
+        return StudentProfileBuilder(**kwargs)
 
     return CourseAssistant(**kwargs)
 
