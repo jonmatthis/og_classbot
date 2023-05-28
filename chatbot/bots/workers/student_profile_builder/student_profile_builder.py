@@ -16,6 +16,7 @@ from chatbot.bots.workers.student_profile_builder.models import StudentProfileSc
 from chatbot.bots.workers.student_profile_builder.student_profile_builder_prompt import \
     STUDENT_PROFILE_UPDATE_PROMPT_TEMPLATE, STUDENT_SUMMARY_UPDATE_PROMPT_TEMPLATE
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
+from chatbot.system.filenames_and_paths import get_thread_backups_collection_name
 
 MAX_TOKEN_COUNT = 2048
 
@@ -191,11 +192,12 @@ def num_tokens_from_string(string: str, model: str) -> int:
 
 
 if __name__ == '__main__':
-    thread_collection_name = "thread_backups_for_Neural Control of Real World Human Movement 2023 Summer1"
+    server_name = "Neural Control of Real World Human Movement 2023 Summer1"
+    thread_collection_name = get_thread_backups_collection_name(server_name=server_name)
     student_profile_collection_name = "student_profiles"
-    assistant = StudentProfileBuilder(mongo_database=MongoDatabaseManager(),
+    student_profile_builder = StudentProfileBuilder(mongo_database=MongoDatabaseManager(),
                                       thread_collection_name=thread_collection_name,
                                       student_profile_collection_name=student_profile_collection_name,
 
                                       )
-    assistant.generate_student_profiles()
+    student_profile_builder.generate_student_profiles()
