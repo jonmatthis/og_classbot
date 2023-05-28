@@ -19,23 +19,14 @@ from pymongo.collection import Collection
 
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
 
-# TODO - I don't think this is right? needed to put it in to avoid some OTHER tech debt crashing things >_<
-COURSE_ASSISTANT_TEST_QUERY = {"student_id": "test_student",
-                    "student_name": "test_student_name",
-                    "thread_title": "test_thread_title",
-                    "thread_id": f"test_session_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"}
 
 class CourseAssistant:
     def __init__(self,
-                 mongo_collection: Collection,
-                 mongo_query=None,
                  temperature=0.8,
                  model_name="gpt-4",
                  ):
 
-        if mongo_query is None:
-            mongo_query = COURSE_ASSISTANT_TEST_QUERY
-        self._mongo_collection = mongo_collection
+
         self._chat_llm = ChatOpenAI(
             streaming=True,
             callbacks=[StreamingStdOutCallbackHandler()],
@@ -55,14 +46,12 @@ class CourseAssistant:
         return self._chat_memory.moving_summary_buffer
 
     def _configure_chat_memory(self):
-        # return ConversationBufferMemory(memory_key="chat_history")
+
         return ConversationSummaryBufferMemory(memory_key="chat_history",
                                                llm=OpenAI(),
-                                               max_token_limit=250)
+                                               max_token_limit=500)
 
     def _create_llm_chain(self):
-        self._update_chat_history(role="system",
-                                  input_text=COURSE_ASSISTANT_SYSTEM_TEMPLATE)
         return LLMChain(llm=self._chat_llm,
                         prompt=self._chat_prompt,
                         memory=self._chat_memory,
@@ -84,45 +73,10 @@ class CourseAssistant:
 
         return chat_prompt
 
-    def _update_chat_memory(self):
-        try:
-            update_operation = {
-                "$set": {
-                    "chat_memory.conversation_summary": self.conversation_summary,
-                    "chat_memory.message_buffer": [
-                        message.dict() for message in self._chat_memory.chat_memory.messages
-                    ],
-                },
-            }
-            self._mongo_collection.update_one(self._mongo_query, update_operation, upsert=True)
-
-        except Exception as e:
-            print(f"Error updating chat memory: {e}")
-
-    def _update_chat_history(self, role: str,
-                             input_text: str):
-        try:
-            self._mongo_collection.update_one(self._mongo_query,
-                                              {"$push": {"messages": {"role": role,
-                                                                      "content": input_text,
-                                                                      "timestamp": datetime.now().isoformat(),
-                                                                      }
-                                                         }
-                                               },
-                                              upsert=True)
-        except Exception as e:
-            print(f"Error updating chat history: {e}")
-
     async def async_process_input(self, input_text):
         print(f"Input: {input_text}")
         print("Streaming response...\n")
-        self._update_chat_history(role="user",
-                                  input_text=input_text)
-
         ai_response = await self._chain.arun(human_input=input_text)
-        self._update_chat_history(role="assistant",
-                                  input_text=ai_response)
-        self._update_chat_memory()
         return ai_response
 
     async def demo(self):
@@ -143,5 +97,5 @@ class CourseAssistant:
 
 
 if __name__ == "__main__":
-    assistant = CourseAssistant(mongo_collection=MongoDatabaseManager().get_collection("test_collection"))
+    assistant = CourseAssistant()
     asyncio.run(assistant.demo())
