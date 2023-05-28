@@ -102,21 +102,24 @@ class StudentProfileBuilder:
             conversation=conversation
         )
 
-    def retrieve_current_student_summary(self, collection: Collection, query) -> str:
+    def retrieve_current_student_summary(self, collection: Collection, query):
         document = collection.find_one(query)
         if document is not None:
             student_summary = document['student_summary']
             return student_summary if student_summary else ""
 
-        return ""
+        return
 
     def retrieve_current_model(self, collection: Collection, query, pydantic_model: Type[BaseModel]) -> BaseModel:
         document = collection.find_one(query)
-        document = collection.find_one(query)
         if document is None:
             return pydantic_model()
-        student_profile = document['student_profile']
-        return pydantic_model(**student_profile) if student_profile else pydantic_model()
+
+        try:
+            student_profile = document['student_profile']
+            return pydantic_model(**student_profile) if student_profile else pydantic_model()
+        except KeyError:
+            return pydantic_model()
 
     def update_mongo(self, collection: Collection, query: dict, data: dict):
         self._mongo_database.upsert(collection=collection,
@@ -124,25 +127,31 @@ class StudentProfileBuilder:
                                     data=data)
 
     def generate_student_profiles(self):
-
+        number_of_students = len(self._student_usernames)
         with get_openai_callback() as cb:
-            for student_username in self._student_usernames:
+            for student_number, student_username in enumerate(self._student_usernames):
                 print(f"-----------------------------------------------------------------------------\n"
                       f"-----------------------------------------------------------------------------\n"
-                      f"Generating profile for {student_username}")
+                      f"Generating profile for {student_username}  - {student_number + 1} of {number_of_students}\n"
+                      f"-----------------------------------------------------------------------------\n"
+                      f"-----------------------------------------------------------------------------\n")
                 mongo_query = {"discord_username": student_username}
                 student_threads = [thread for thread in
                                    self._thread_collection.find({'thread_owner_name': student_username})]
 
-                current_student_model = self.retrieve_current_model(collection=self._student_profile_collection,
-                                                                    query=mongo_query,
-                                                                    pydantic_model=StudentProfileSchema)
-                print(f"Current model (before update):\n{current_student_model}\n")
+                # current_student_model = self.retrieve_current_model(collection=self._student_profile_collection,
+                #                                                     query=mongo_query,
+                #                                                     pydantic_model=StudentProfileSchema)
+                # print(f"Current model (before update):\n{current_student_model}\n")
 
                 current_student_summary = self.retrieve_current_student_summary(
                     collection=self._student_profile_collection,
                     query=mongo_query)
                 print(f"Current summary (before update):\n{current_student_summary}\n")
+
+                if  current_student_summary is not None:
+                    print(f"Student Summary already exists - skipping!\n")
+                    continue
 
                 self._mongo_database.upsert(collection=self._student_profile_collection_name,
                                             query=mongo_query,
@@ -156,19 +165,18 @@ class StudentProfileBuilder:
                             f"Thread is too long ({full_thread_token_count} tokens), not sending full conversation to model")
                         thread_as_str = ""
 
-                        current_student_model = self.update_student_model(summary=thread['summary'],
-                                                                          conversation=thread_as_str,
-                                                                          current_model=current_student_model)
-                        print(f"Current model (after update):\n{current_student_model}\n\n---\n\n")
+                    # current_student_model = self.update_student_model(summary=thread['summary'],
+                    #                                                   conversation=thread_as_str,
+                    #                                                   current_model=current_student_model)
+                    # print(f"Current model (after update):\n{current_student_model}\n\n---\n\n")
 
+                    current_student_summary = self.update_student_summary(
+                        current_student_summary=current_student_summary,
+                        conversation_summary=thread['summary'],
+                        conversation=thread_as_str)
 
-                        current_student_summary = self.update_student_summary(
-                            current_student_summary=current_student_summary,
-                            conversation_summary=thread['summary'],
-                            conversation=thread_as_str)
-
-                        print(f"Current summary (after update):\n{current_student_summary}\n\n---\n\n")
-                        print(f"OpenAI API callback:\n {cb}\n")
+                    print(f"Current summary (after update):\n{current_student_summary}\n\n---\n\n")
+                    print(f"OpenAI API callback:\n {cb}\n")
 
                     self._mongo_database.upsert(collection=self._student_profile_collection_name,
                                                 query=mongo_query,

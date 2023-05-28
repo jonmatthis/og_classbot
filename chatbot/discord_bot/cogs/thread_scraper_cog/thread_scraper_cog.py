@@ -5,6 +5,7 @@ from discord.ext import commands
 
 from chatbot.bots.workers.thread_summarizer import ThreadSummarizer
 from chatbot.system.environment_variables import get_admin_users
+from chatbot.system.filenames_and_paths import get_current_date_time_string
 
 logger = logging.getLogger(__name__)
 
@@ -50,13 +51,13 @@ class ThreadScraperCog(commands.Cog):
                         self.mongo_database.upsert(
                             collection=get_thread_backups_collection_name(server_name=message.guild.name),
                             query=mongo_query,
-                            data={"$push": {
+                            data={"$addToSet": {
                                 "messages": {
                                     'author': str(message.author),
                                     'author_id': message.author.id,
                                     'user_id': message.author.id,
                                     'content': message_content,
-                                    'timestamp': message.created_at.isoformat(),
+                                    'timestamp': get_current_date_time_string(),
                                     'channel': message.channel.name,
                                     'jump_url': message.jump_url,
                                     'dump': str(message)
@@ -67,6 +68,10 @@ class ThreadScraperCog(commands.Cog):
                                 }
                             }
                         )
+                    self.mongo_database.save_json(
+                        collection_name=get_thread_backups_collection_name(server_name=message.guild.name),
+                        query={})
+
                     if summarize_threads:
                         logger.info("Generating thread summary")
                         thread_summary = await ThreadSummarizer(thread_as_list_of_strings).summarize()

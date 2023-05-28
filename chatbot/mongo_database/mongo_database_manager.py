@@ -1,27 +1,18 @@
-import os
+import json
+import logging
+from collections import defaultdict
 from datetime import datetime
+from pathlib import Path
+from typing import Union
 
-from dotenv import load_dotenv
 from pymongo import MongoClient
 
-load_dotenv()
+from chatbot.system.environment_variables import get_mongo_uri, get_mongo_database_name, \
+    get_mongo_chat_history_collection_name
+from chatbot.system.filenames_and_paths import get_base_data_folder_path, get_default_json_save_path, \
+    get_current_date_time_string
 
-
-def get_mongo_uri() -> str:
-    is_docker = os.getenv('IS_DOCKER', False)
-    if is_docker:
-        return os.getenv('MONGO_URI_DOCKER')
-    else:
-        return os.getenv('MONGO_URI_LOCAL')
-
-
-def get_mongo_database_name():
-    return os.getenv('MONGODB_DATABASE_NAME')
-
-
-def get_mongo_chat_history_collection_name():
-    return os.getenv('MONGODB_CHAT_HISTORY_COLLECTION_NAME')
-
+logger = logging.getLogger(__name__)
 
 TEST_MONGO_QUERY = {"student_id": "test_student",
                     "student_name": "test_student_name",
@@ -30,8 +21,12 @@ TEST_MONGO_QUERY = {"student_id": "test_student",
 
 
 class MongoDatabaseManager:
-    def __init__(self, ):
-        self._client = MongoClient(get_mongo_uri())
+    def __init__(self, mongo_uri: str=None):
+        if mongo_uri is None:
+            self._client = MongoClient(get_mongo_uri())
+        else:
+            self._client = MongoClient(mongo_uri)
+
         self._database = self._client.get_default_database(get_mongo_database_name())
 
     @property
@@ -52,6 +47,25 @@ class MongoDatabaseManager:
     def find(self, collection, query={}):
         return self._database[collection].find(query)
 
+    def save_json(self, collection_name, query=None, save_path:Union[str, Path] = None):
+        if query is None:
+            query = defaultdict()
+        collection = self._database[collection_name]
+        if save_path is None:
+            save_path = get_default_json_save_path(filename=f"{collection_name}_{get_current_date_time_string()}")
+
+        # Convert the data to a list.
+        data = list(collection.find(query))
+
+        # Make sure the _id field (which is a MongoDB ObjectId) is serializable.
+        for document in data:
+            document["_id"] = str(document["_id"])
+
+        # Save data to a JSON file.
+        with open(save_path, 'w') as file:
+            file.write(json.dumps(data, indent=4))
+
+        logger.info(f"Saved {len(data)} documents to {save_path}")
 
 if __name__ == "__main__":
     # Replace 'your_mongodb_uri' with your actual MongoDB URI
@@ -73,3 +87,13 @@ if __name__ == "__main__":
     print("Documents in 'test' collection:")
     for document in find_result:
         print(document)
+
+    mongodb_manager.save_json('test')
+
+    # Delete the 'test' collection
+    mongodb_manager._database.drop_collection('test')
+
+    # Close the connection to MongoDB
+    mongodb_manager._client.close()
+
+    print("Done!")

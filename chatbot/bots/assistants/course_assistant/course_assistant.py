@@ -17,17 +17,24 @@ from langchain.prompts import (
 )
 from pymongo.collection import Collection
 
-from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager, TEST_MONGO_QUERY
+from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
 
+# TODO - I don't think this is right? needed to put it in to avoid some OTHER tech debt crashing things >_<
+COURSE_ASSISTANT_TEST_QUERY = {"student_id": "test_student",
+                    "student_name": "test_student_name",
+                    "thread_title": "test_thread_title",
+                    "thread_id": f"test_session_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"}
 
 class CourseAssistant:
     def __init__(self,
                  mongo_collection: Collection,
+                 mongo_query=None,
                  temperature=0.8,
                  model_name="gpt-4",
-                 mongo_query: dict = TEST_MONGO_QUERY,
                  ):
 
+        if mongo_query is None:
+            mongo_query = COURSE_ASSISTANT_TEST_QUERY
         self._mongo_collection = mongo_collection
         self._chat_llm = ChatOpenAI(
             streaming=True,

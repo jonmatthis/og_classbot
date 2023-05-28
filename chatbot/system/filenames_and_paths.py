@@ -30,4 +30,13 @@ def get_log_file_path():
 
 
 def create_log_file_name():
-    return "log_" + datetime.now().isoformat().replace(":", "_").replace(".", "_") + ".log"
+    return "log_" + get_current_date_time_string() + ".log"
+
+
+def get_current_date_time_string():
+    return datetime.now().isoformat().replace(":", "_").replace(".", "_")
+
+
+def get_default_json_save_path(filename: str):
+    save_path = Path(get_base_data_folder_path()) / f"{filename}.json"
+    return str(save_path)
