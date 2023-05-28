@@ -22,8 +22,6 @@ class CourseAssistant:
                  temperature=0.8,
                  model_name="gpt-4",
                  ):
-
-
         self._chat_llm = ChatOpenAI(
             streaming=True,
             callbacks=[StreamingStdOutCallbackHandler()],
@@ -31,26 +29,21 @@ class CourseAssistant:
             model_name=model_name,
         )
 
-
         self._chat_prompt = self._create_chat_prompt()
-        self._chat_memory = self._configure_chat_memory()
+        self._memory = self._configure_memory()
 
         self._chain = self._create_llm_chain()
 
-    @property
-    def conversation_summary(self):
-        return self._chat_memory.moving_summary_buffer
-
-    def _configure_chat_memory(self):
+    def _configure_memory(self):
 
         return ConversationSummaryBufferMemory(memory_key="chat_history",
-                                               llm=OpenAI(),
+                                               llm=OpenAI(temperature=0),
                                                max_token_limit=500)
 
     def _create_llm_chain(self):
         return LLMChain(llm=self._chat_llm,
                         prompt=self._chat_prompt,
-                        memory=self._chat_memory,
+                        memory=self._memory,
                         verbose=True,
                         )
 
@@ -90,6 +83,16 @@ class CourseAssistant:
             response = await self.async_process_input(input_text)
 
             print("\n")
+
+    async def load_memory_from_thread(self, thread, bot_name:str):
+        async for message in thread.history(limit=None, oldest_first=True):
+            if message.content == "":
+                continue
+            if str(message.author) == bot_name:
+                self._memory.chat_memory.add_ai_message(message.content)
+            else:
+                self._memory.chat_memory.add_user_message(message.content)
+
 
 
 if __name__ == "__main__":
