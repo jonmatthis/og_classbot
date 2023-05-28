@@ -1,5 +1,4 @@
 import asyncio
-from datetime import datetime
 
 from dotenv import load_dotenv
 
@@ -15,9 +14,7 @@ from langchain.prompts import (
     HumanMessagePromptTemplate,
     ChatPromptTemplate,
 )
-from pymongo.collection import Collection
 
-from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
 
 
 class CourseAssistant:
@@ -34,7 +31,6 @@ class CourseAssistant:
             model_name=model_name,
         )
 
-        self._mongo_query = mongo_query
 
         self._chat_prompt = self._create_chat_prompt()
         self._chat_memory = self._configure_chat_memory()

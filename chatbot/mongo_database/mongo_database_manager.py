@@ -3,22 +3,30 @@ import logging
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-from typing import Union
+from typing import Any, Union
 
 from pymongo import MongoClient
 
 from chatbot.system.environment_variables import get_mongo_uri, get_mongo_database_name, \
     get_mongo_chat_history_collection_name
-from chatbot.system.filenames_and_paths import get_base_data_folder_path, get_default_json_save_path, \
+from chatbot.system.filenames_and_paths import get_base_data_folder_path, get_default_database_json_save_path, \
     get_current_date_time_string
 
 logger = logging.getLogger(__name__)
 
-TEST_MONGO_QUERY = {"student_id": "test_student",
-                    "student_name": "test_student_name",
-                    "thread_title": "test_thread_title",
-                    "thread_id": f"test_session_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"}
+TEST_MONGO_QUERY = {
+    "student_id": "test_student",
+    "student_name": "test_student_name",
+    "thread_title": "test_thread_title",
+    "thread_id": f"test_session_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
+}
 
+def default_serialize(o: Any) -> str:
+    if isinstance(o, datetime):
+        return o.isoformat()
+    elif hasattr(o, "__dict__"):
+        return o.__dict__
+    return str(o)
 
 class MongoDatabaseManager:
     def __init__(self, mongo_uri: str=None):
@@ -38,62 +46,58 @@ class MongoDatabaseManager:
             self._database.create_collection(collection_name)
         return self._database[collection_name]
 
-    def insert(self, collection, document):
+    def insert(self, collection: str, document: dict):
         return self._database[collection].insert_one(document)
 
-    def upsert(self, collection, query, data):
+    def upsert(self, collection: str, query: dict, data: dict):
         return self._database[collection].update_one(query, data, upsert=True)
 
-    def find(self, collection, query={}):
+    def find(self, collection: str, query: dict=None):
+        query = query if query is not None else {}
         return self._database[collection].find(query)
 
-    def save_json(self, collection_name, query=None, save_path:Union[str, Path] = None):
-        if query is None:
-            query = defaultdict()
+    def save_json(self, collection_name: str, query: dict=None, save_path: Union[str, Path]=None):
+        query = query if query is not None else defaultdict()
         collection = self._database[collection_name]
-        if save_path is None:
-            save_path = get_default_json_save_path(filename=f"{collection_name}_{get_current_date_time_string()}")
+        save_path = save_path if save_path is not None else get_default_database_json_save_path(filename=f"{collection_name}_{get_current_date_time_string()}")
 
-        # Convert the data to a list.
         data = list(collection.find(query))
 
-        # Make sure the _id field (which is a MongoDB ObjectId) is serializable.
         for document in data:
             document["_id"] = str(document["_id"])
 
-        # Save data to a JSON file.
         with open(save_path, 'w') as file:
-            file.write(json.dumps(data, indent=4))
+            json.dump(data, file, indent=4, default=default_serialize)
 
         logger.info(f"Saved {len(data)} documents to {save_path}")
 
+    def close(self):
+        self._client.close()
+
 if __name__ == "__main__":
-    # Replace 'your_mongodb_uri' with your actual MongoDB URI
-    mongodb_manager = MongoDatabaseManager('mongodb://localhost:27017')  # run locally
+    MONGO_URI = 'mongodb://localhost:27017'  # run locally
+    TEST_COLLECTION = 'test'
+    mongodb_manager = MongoDatabaseManager(MONGO_URI)
 
     test_document = {
         'name': 'Test',
         'description': 'This is a test document',
-        'timestamp': datetime.now().isoformat(),
+        'timestamp': datetime.now(),
     }
 
-    # Insert the test document into a 'test' collection
-    insert_result = mongodb_manager.insert('test', test_document)
+    insert_result = mongodb_manager.insert(TEST_COLLECTION, test_document)
     print(f'Inserted document with ID: {insert_result.inserted_id}')
 
-    # Retrieve all documents from the 'test' collection
-    find_result = mongodb_manager.find('test')
+    find_result = mongodb_manager.find(TEST_COLLECTION)
 
     print("Documents in 'test' collection:")
     for document in find_result:
         print(document)
 
-    mongodb_manager.save_json('test')
+    mongodb_manager.save_json(TEST_COLLECTION)
 
-    # Delete the 'test' collection
-    mongodb_manager._database.drop_collection('test')
+    mongodb_manager._database.drop_collection(TEST_COLLECTION)
 
-    # Close the connection to MongoDB
-    mongodb_manager._client.close()
+    mongodb_manager.close()
 
     print("Done!")

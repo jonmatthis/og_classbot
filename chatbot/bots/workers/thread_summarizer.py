@@ -1,8 +1,12 @@
+import logging
 from typing import List
 
 from langchain import OpenAI, PromptTemplate, LLMChain
 
+from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
+from chatbot.system.filenames_and_paths import get_thread_backups_collection_name
 
+logger = logging.getLogger(__name__)
 class ThreadSummarizer:
     def __init__(self,
                  thread_data: List[str]):
@@ -21,3 +25,22 @@ class ThreadSummarizer:
 
     async def summarize(self) -> str:
         return await self.chain.arun(self.thread_as_string)
+
+if __name__ == "__main__":
+
+    mongo_database = MongoDatabaseManager()
+    server_name = "Neural Control of Real World Human Movement 2023 Summer1"
+    thread_collection = mongo_database.get_collection(get_thread_backups_collection_name(server_name=server_name))
+    logger.info("Generating thread summary")
+
+    # thread_summary = await ThreadSummarizer(thread_as_list_of_strings).summarize()
+    # logger.info(f"Saving thread summary to mongo database, summary: {thread_summary}")
+    # self.mongo_database.upsert(
+    #     collection=get_thread_backups_collection_name(server_name=message.guild.name),
+    #     query=mongo_query,
+    #     data={
+    #         "$set": {
+    #             "summary": thread_summary
+    #         }
+    #     }
+    # )

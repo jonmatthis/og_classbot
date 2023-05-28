@@ -1,15 +1,22 @@
+import os
+
 from flask import Flask, jsonify
 from flask_pymongo import PyMongo
 
+from chatbot.system.environment_variables import get_mongo_uri
+from chatbot.system.filenames_and_paths import get_thread_backups_collection_name
+
 app = Flask(__name__)
 
-# You should replace "mongodb://localhost:27017/myDatabase" with your MongoDB URI and database name
-app.config["MONGO_URI"] = "mongodb://localhost:27017/myDatabase"
+
+app.config["MONGO_URI"] = get_mongo_uri()
 mongo = PyMongo(app)
 
 @app.route('/view', methods=['GET'])
 def get_all_data():
-    collection = mongo.db.myCollection  # Replace "myCollection" with your collection name
+    server_name = "Neural Control of Real World Human Movement 2023 Summer1"
+
+    collection = mongo.db[get_thread_backups_collection_name(server_name=server_name)]
     output = []
     for s in collection.find():
         output.append({'_id' : str(s['_id']), 'data' : s['data']})  # Replace 'data' with your document fields

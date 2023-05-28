@@ -46,7 +46,7 @@ class RefactorBot:
 
 if __name__ == "__main__":
     path_to_package = r"/chatbot/discord_bot"
-    assistant = CourseAssistant(mongo_collection=MongoDatabaseManager().get_collection("refactor_bot_test"))
+    assistant = CourseAssistant()
 
     bot = RefactorBot(directory=path_to_package, assistant=assistant)
     asyncio.run(bot.refactor())

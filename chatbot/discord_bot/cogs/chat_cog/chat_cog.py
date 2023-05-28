@@ -182,17 +182,7 @@ class ChatCog(discord.Cog):
             owner={"id": user_id,
                    "name": user_name},
             thread=thread,
-            assistant=CourseAssistant(mongo_collection=self._mongo_database.chat_history_collection,
-                                      mongo_query={"user_id": user_id,
-                                                   "user_name": user_name,
-                                                   "server_name": server_name,
-                                                   "server_id": server_id,
-                                                   "thread_id": thread.id,
-                                                   "thread_title": chat_title,
-                                                   "start_time": datetime.now().isoformat()
-                                                   }
-
-                                      )
+            assistant=CourseAssistant()
         )
         return chat
 
