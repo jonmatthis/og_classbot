@@ -37,9 +37,6 @@ class MongoDatabaseManager:
 
         self._database = self._client.get_default_database(get_mongo_database_name())
 
-    @property
-    def chat_history_collection(self):
-        return self._database[get_mongo_chat_history_collection_name()]
 
     def get_collection(self, collection_name: str):
         if collection_name not in self._database.list_collection_names():
@@ -52,15 +49,14 @@ class MongoDatabaseManager:
     def upsert(self, collection: str, query: dict, data: dict):
         return self._database[collection].update_one(query, data, upsert=True)
 
-    def find(self, collection: str, query: dict=None):
+    def find(self, collection_name: str, query: dict=None):
         query = query if query is not None else {}
-        return self._database[collection].find(query)
+        return self._database[collection_name].find(query)
 
     def save_json(self, collection_name: str, query: dict=None, save_path: Union[str, Path]=None):
         query = query if query is not None else defaultdict()
         collection = self._database[collection_name]
-        save_path = save_path if save_path is not None else get_default_database_json_save_path(filename=f"{collection_name}_{get_current_date_time_string()}")
-
+        save_path = save_path if save_path is not None else get_default_database_json_save_path(collection_name, timestamp=True)
         data = list(collection.find(query))
 
         for document in data:

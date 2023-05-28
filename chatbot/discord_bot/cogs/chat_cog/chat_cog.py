@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import List, Dict, Any
 
 import discord
+from discord import Message
 from pydantic import BaseModel
 
 from chatbot.bots.assistants.course_assistant.course_assistant import CourseAssistant
@@ -17,7 +18,6 @@ logger = logging.getLogger(__name__)
 
 class Chat(BaseModel):
     title: str
-    owner: Dict[str, Any]
     thread: discord.Thread
     assistant: CourseAssistant
 
@@ -86,9 +86,8 @@ class ChatCog(discord.Cog):
             # Get the channel and message using the payload
             channel = self._discord_bot.get_channel(payload.channel_id)
             message = await channel.fetch_message(payload.message_id)
-            chat_title = self._create_chat_title_string(user_name=str(message.author))
-            await self._create_chat_thread(chat_title=chat_title,
-                                           message_object=message,
+
+            await self._create_chat_thread(message_object=message,
                                            user_id=message.author.id,
                                            user_name=str(message.author),
                                            initial_message=message.content
@@ -109,19 +108,16 @@ class ChatCog(discord.Cog):
         if not message.channel.__class__ == discord.Thread:
             return
 
-        # only respond to messages in threads we've seen before
-        query_response = self._mongo_database.chat_history_collection.find_one({"thread_id": message.channel.id})
-        if not query_response:
+        # Only respond to messages in threads owned by the bot
+        if not message.channel.owner_id == self._discord_bot.user.id:
             return
+
         # ignore if first character is ~
         if message.content[0] == "~":
             return
 
-        try:
-            chat = self._active_threads[message.channel.id]
-        except KeyError:
-            chat = await self._create_chat(thread=message.channel,
-                                           mongo_query=self._get_mongo_query(message))
+
+        chat = await self._get_or_create_chat(message=message)
 
         logger.info(f"Sending message to the agent: {message.content}")
 
@@ -144,51 +140,48 @@ class ChatCog(discord.Cog):
         return f"{user_name}'s chat with {self._discord_bot.user.name}"
 
     async def _create_chat_thread(self,
-                                  chat_title: str,
-                                  message_object: discord.Message,
-                                  user_id: int,
-                                  user_name: str,
+                                  message: discord.Message,
                                   initial_message: str = "A human has requested a chat, say hello!"
                                   ):
 
-        thread = await message_object.create_thread(name=chat_title)
 
-        chat = await self._create_chat(chat_title=chat_title,
-                                       thread=thread,
-                                       user_id=user_id,
-                                       user_name=user_name,
-                                       server_id=message_object.guild.id,
-                                       server_name=message_object.guild.name)
+
+        chat = await self._get_or_create_chat(message=message)
 
         await chat.thread.send(f"<@{user_id}> is the thread owner.")
         await chat.thread.send(f"The bot is ready to chat! "
                                f"\n(bot ignores messages starting with ~)")
-        self._active_threads[chat.thread.id] = chat
+
 
         await chat.thread.send(f"Beginning chat with initial message: \n"
                                f"```\n{initial_message}\n```\n------------------")
 
         await self._async_send_message_to_bot(chat=chat, input_text=initial_message)
 
-    async def _create_chat(self,
-                           chat_title: str,
-                           thread: discord.Thread,
-                           user_id: int,
-                           user_name: str,
-                           server_id: int,
-                           server_name: str):
+    async def _get_or_create_chat(self, message: Message) -> Chat:
+        if message.channel.id in self._active_threads:
+            return self._active_threads[message.channel.id]
+
+        user_name = str(message.channel.author)
+        chat_title = self._create_chat_title_string(user_name=user_name)
+
+        if not message.channel.__class__ == discord.Thread:
+            thread = await message.create_thread(name=chat_title)
+        else:
+            thread = message.channel
+
         chat = Chat(
             title=chat_title,
-            owner={"id": user_id,
-                   "name": user_name},
             thread=thread,
             assistant=CourseAssistant()
         )
+        self._active_threads[message.channel.id] = chat
         return chat
 
-    async def _make_title_card_embed(self, user_name: str, chat_title: str):
-        return discord.Embed(
-            title=chat_title,
-            description=f"A conversation between {user_name} and the bot, started on {datetime.now()}",
-            color=0x25d790,
-        )
+
+async def _make_title_card_embed(self, user_name: str, chat_title: str):
+    return discord.Embed(
+        title=chat_title,
+        description=f"A conversation between {user_name} and the bot, started on {datetime.now()}",
+        color=0x25d790,
+    )

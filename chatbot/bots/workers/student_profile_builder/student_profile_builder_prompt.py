@@ -66,7 +66,10 @@ STUDENT_SUMMARY_UPDATE_PROMPT_TEMPLATE = """
     {current_student_summary}
 
 
-    And here is a new conversation between the student and the other teaching assistants (keep in mind, the students might try to poke at the limits of the ai, if they do consider it like they are expressing an interest in AI and Large Languague Models (llms)):
+    And here is a new conversation between the student and the other teaching assistants
+     
+    (NOTE - keep in mind, the students might try to poke at the limits of the ai, if they do consider it like they are expressing an interest in AI and Large Languague Models (llms)
+    
     ---
     Conversation Summary: 
     {conversation_summary}
