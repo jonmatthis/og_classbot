@@ -159,6 +159,8 @@ class ChatCog(discord.Cog):
 
         if initial_text_input is None:
             initial_text_input = f"A human has requested a chat!"
+
+        if thread.message_count == 0:
             await chat.thread.send(
                 embed=self._initial_message_embed(message=message, initial_message=initial_text_input))
 
