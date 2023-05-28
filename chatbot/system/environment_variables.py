@@ -9,3 +9,19 @@ def get_admin_users()->List[str]:
     admin_users = admin_users.split(',')
     admin_users = [int(user) for user in admin_users]
     return admin_users
+
+
+def get_mongo_uri() -> str:
+    is_docker = os.getenv('IS_DOCKER', False)
+    if is_docker:
+        return os.getenv('MONGO_URI_DOCKER')
+    else:
+        return os.getenv('MONGO_URI_LOCAL')
+
+
+def get_mongo_database_name():
+    return os.getenv('MONGODB_DATABASE_NAME')
+
+
+def get_mongo_chat_history_collection_name():
+    return os.getenv('MONGODB_CHAT_HISTORY_COLLECTION_NAME')

@@ -161,3 +161,4 @@ cython_debug/
 .vscode/
 .chroma/
 output/
+student_info.env
