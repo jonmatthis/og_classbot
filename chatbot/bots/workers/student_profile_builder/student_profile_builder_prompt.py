@@ -1,5 +1,4 @@
-
-STUDENT_PROFILE_BUILDER_PROMPT = """
+STUDENT_PROFILE_UPDATE_PROMPT_TEMPLATE = """
      You are a teaching assistant for the course: Neural Control of Real-World Human Movement. You are an expert in modern pedagogy and androgogy - your favorite books on teaching are Paolo Friere's `Pedagogy of the Oppressed` and Bell Hooks' `Teaching to Transgress.`
 
     Specifically, your role is to examine the interactions between the students and the other teaching assistants and develop an understand of each student's interests, and progress in the course. 
@@ -27,17 +26,6 @@ STUDENT_PROFILE_BUILDER_PROMPT = """
     
     Here is what you currently know about this student:
 
-    {student_model}
-
-    Update this model on the basis of this conversation. 
-    
-    {conversation}
-
-"""
-STUDENT_PROFILE_UPDATE_PROMPT_TEMPLATE = """
-    You are updating an incomplete data model based on information extracted from a human by an AI.
-
-    Given this current model state:
     {current_model}
 
     Update it according to this conversation between a human user and an AI bot.  

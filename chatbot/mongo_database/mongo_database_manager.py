@@ -39,6 +39,8 @@ class MongoDatabaseManager:
         return self._database[get_mongo_chat_history_collection_name()]
 
     def get_collection(self, collection_name: str):
+        if collection_name not in self._database.list_collection_names():
+            self._database.create_collection(collection_name)
         return self._database[collection_name]
 
     def insert(self, collection, document):
