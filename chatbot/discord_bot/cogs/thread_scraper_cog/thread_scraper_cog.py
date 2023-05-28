@@ -32,6 +32,7 @@ class ThreadScraperCog(commands.Cog):
             logger.info(f"User {ctx.user_id} is not an admin user")
             return
         channels = await ctx.guild.fetch_channels()
+
         for channel in channels:
             if isinstance(channel, discord.TextChannel):  # If this is a text channel
                 for thread in channel.threads:  # Loop through each thread
@@ -70,6 +71,7 @@ class ThreadScraperCog(commands.Cog):
                                 }
                             }
                         )
+
 
 
         logger.info("Done scraping threads - saving database to disk")
