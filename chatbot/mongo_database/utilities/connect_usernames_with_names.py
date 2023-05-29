@@ -1,7 +1,6 @@
 import os
 
 import pandas as pd
-
 from dotenv import load_dotenv
 
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager

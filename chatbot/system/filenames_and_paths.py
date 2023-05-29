@@ -1,4 +1,3 @@
-import time
 from datetime import datetime
 from pathlib import Path
 from typing import Union
@@ -8,6 +7,9 @@ DATABASE_BACKUP = "database_backup"
 BASE_DATA_FOLDER_NAME = "chatbot_data"
 
 LOG_FILE_FOLDER_NAME = "logs"
+
+STUDENT_PROFILES_COLLECTION_NAME = "student_profiles"
+STUDENT_SUMMARIES_COLLECTION_NAME = "student_summaries"
 
 
 
@@ -54,4 +56,5 @@ def get_default_database_json_save_path(filename: str, timestamp: bool = False):
 
 
 def get_thread_backups_collection_name(server_name: str):
-    return f"thread_backups_for_{server_name}"
+
+    return f"thread_backups_for_{server_name.replace(' ', '_')  }"

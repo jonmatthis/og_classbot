@@ -22,6 +22,6 @@ chroma_db = Chroma.from_documents(texts, embeddings)
 
 retriever = chroma_db.as_retriever()
 
-qa = RetrievalQA.from_chain_type(llm=OpenAI(), chain_type="stuff", retriever=retriever)
+qa = RetrievalQA.from_chain_type(llm=OpenAI(), chain_type="stuff", retriever=retriever, verbose=True)
 
 qa.run("What is this class about?")

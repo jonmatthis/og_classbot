@@ -7,10 +7,9 @@ from typing import Any, Union
 
 from pymongo import MongoClient
 
-from chatbot.system.environment_variables import get_mongo_uri, get_mongo_database_name, \
-    get_mongo_chat_history_collection_name
-from chatbot.system.filenames_and_paths import get_base_data_folder_path, get_default_database_json_save_path, \
-    get_current_date_time_string
+from chatbot.system.environment_variables import get_mongo_uri, get_mongo_database_name
+from chatbot.system.filenames_and_paths import get_default_database_json_save_path, \
+    STUDENT_PROFILES_COLLECTION_NAME
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +20,7 @@ TEST_MONGO_QUERY = {
     "thread_id": f"test_session_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
 }
 
+
 def default_serialize(o: Any) -> str:
     if isinstance(o, datetime):
         return o.isoformat()
@@ -28,15 +28,15 @@ def default_serialize(o: Any) -> str:
         return o.__dict__
     return str(o)
 
+
 class MongoDatabaseManager:
-    def __init__(self, mongo_uri: str=None):
+    def __init__(self, mongo_uri: str = None):
         if mongo_uri is None:
             self._client = MongoClient(get_mongo_uri())
         else:
             self._client = MongoClient(mongo_uri)
 
         self._database = self._client.get_default_database(get_mongo_database_name())
-
 
     def get_collection(self, collection_name: str):
         if collection_name not in self._database.list_collection_names():
@@ -49,14 +49,15 @@ class MongoDatabaseManager:
     def upsert(self, collection: str, query: dict, data: dict):
         return self._database[collection].update_one(query, data, upsert=True)
 
-    def find(self, collection_name: str, query: dict=None):
+    def find(self, collection_name: str, query: dict = None):
         query = query if query is not None else {}
         return self._database[collection_name].find(query)
 
-    def save_json(self, collection_name: str, query: dict=None, save_path: Union[str, Path]=None):
+    def save_json(self, collection_name: str, query: dict = None, save_path: Union[str, Path] = None):
         query = query if query is not None else defaultdict()
         collection = self._database[collection_name]
-        save_path = save_path if save_path is not None else get_default_database_json_save_path(collection_name, timestamp=True)
+        save_path = save_path if save_path is not None else get_default_database_json_save_path(collection_name,
+                                                                                                timestamp=True)
         data = list(collection.find(query))
 
         for document in data:
@@ -69,6 +70,20 @@ class MongoDatabaseManager:
 
     def close(self):
         self._client.close()
+
+    def get_student_profile(self, discord_username: str):
+        return self._database[STUDENT_PROFILES_COLLECTION_NAME].find_one(
+            {"discord_username": discord_username})
+
+    def get_student_summary(self, discord_username: str):
+        student_profile = self.get_student_profile(discord_username=discord_username)
+
+        try:
+            return student_profile["student_summary"]
+        except Exception as e:
+            logger.error(f"Error getting student summary for {discord_username}: {e}")
+            return None
+
 
 if __name__ == "__main__":
     MONGO_URI = 'mongodb://localhost:27017'  # run locally

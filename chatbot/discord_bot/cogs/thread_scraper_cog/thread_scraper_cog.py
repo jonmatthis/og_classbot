@@ -1,42 +1,54 @@
-import hashlib
 import logging
 
 import discord
 from discord.ext import commands
 
+from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
 from chatbot.system.environment_variables import get_admin_users
-from chatbot.system.filenames_and_paths import get_current_date_time_string, get_default_database_json_save_path, \
+from chatbot.system.filenames_and_paths import get_default_database_json_save_path, \
     get_thread_backups_collection_name
 
 logger = logging.getLogger(__name__)
 
 
-
-
 class ThreadScraperCog(commands.Cog):
-    def __init__(self, bot, mongo_database):
+    def __init__(self,
+                 bot: discord.Bot,
+                 mongo_database_manager: MongoDatabaseManager):
         self.bot = bot
-        self.mongo_database = mongo_database
-
+        self.mongo_database_manager = mongo_database_manager
 
     @discord.slash_command(name='scrape_threads', description='(ADMIN ONLY) Scrape all threads in the current server')
     @discord.option(name="timestamp_backup",
                     description="Whether or not add a timestamp to the backup filename",
                     input_type=bool,
                     default=True)
+    @discord.option(name="full_server_backup",
+                    description="Whether or not to backup the entire server",
+                    input_type=bool,
+                    default=False)
     async def scrape_threads(self,
                              ctx: discord.ApplicationContext,
-                             timestamp_backup: bool = True,):
+                             timestamp_backup: bool = True,
+                             full_server_backup: bool = False,
+):
         # Make sure we're only responding to the admin users
         if not ctx.user.id in get_admin_users():
             logger.info(f"User {ctx.user_id} is not an admin user")
             return
-        channels = await ctx.guild.fetch_channels()
+
+        if full_server_backup:
+            channels = await ctx.guild.fetch_channels()
+            logger.info(f"Saving all threads in server: {ctx.guild.name}")
+        else:
+            channels = [ctx.channel]
+            logger.info(f"Saving all threads in channel: {ctx.channel.name}")
 
         for channel in channels:
             if isinstance(channel, discord.TextChannel):  # If this is a text channel
                 for thread in channel.threads:  # Loop through each thread
                     logger.info(f"Saving thread: {thread.name} to mongo database")
+
                     thread_owner_name = thread.name.split("'")[0]
                     mongo_query = {"server_name": ctx.guild.name,
                                    "thread_owner_name": thread_owner_name,
@@ -49,7 +61,8 @@ class ThreadScraperCog(commands.Cog):
                     async for message in thread.history(limit=None, oldest_first=True):
                         message_content = message.content
                         thread_as_list_of_strings.append(f"{str(message.author)} said: '{message_content}'")
-                        self.mongo_database.upsert(
+
+                        self.mongo_database_manager.upsert(
                             collection=get_thread_backups_collection_name(server_name=message.guild.name),
                             query=mongo_query,
                             data={"$addToSet": {
@@ -72,14 +85,13 @@ class ThreadScraperCog(commands.Cog):
                             }
                         )
 
-
-
         logger.info("Done scraping threads - saving database to disk")
-        json_save_path = get_default_database_json_save_path(filename=f"{message.guild.name}_thread_backup.json", timestamp=timestamp_backup)
-        self.mongo_database.save_json(
+        json_save_path = get_default_database_json_save_path(filename=f"{message.guild.name}_thread_backup.json",
+                                                             timestamp=timestamp_backup)
+        self.mongo_database_manager.save_json(
             collection_name=get_thread_backups_collection_name(server_name=message.guild.name),
             query={},
-            save_path= json_save_path
+            save_path=json_save_path
         )
         logger.info(f"Done saving database to disk - {json_save_path}")
 
