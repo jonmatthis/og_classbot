@@ -8,8 +8,9 @@ import discord
 from pydantic import BaseModel
 
 from chatbot.bots.assistants.course_assistant.course_assistant import CourseAssistant
-from chatbot.bots.assistants.course_assistant.prompts.course_assistant_prompt import \
+from chatbot.bots.assistants.course_assistant.prompts.general_course_assistant_prompt import \
     GENERAL_COURSE_ASSISTANT_SYSTEM_TEMPLATE
+from chatbot.bots.assistants.course_assistant.prompts.project_manager_prompt import PROJECT_MANAGER_TASK_PROMPT
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
 from chatbot.system.environment_variables import get_admin_users
 
@@ -47,19 +48,29 @@ class ChatCog(discord.Cog):
         self._course_assistant_llm_chains = {}
 
     @discord.slash_command(name="chat", description="Chat with the bot")
+    @discord.option(name="use_project_manager_prompt?",
+                    description="Whether or not this is a project manager prompt",
+                    input_type=bool,
+                    required=False)
     @discord.option(name="initial_message",
                     description="The initial message to send to the bot",
                     input_type=str,
+
                     required=False)
     async def chat(self,
                    ctx: discord.ApplicationContext,
+                   use_project_manager_prompt: bool = False,
                    initial_text_input: str = None):
 
         if not ctx.channel.id in self._allowed_channels:
             logger.info(f"Channel {ctx.channel.id} is not allowed to start a chat")
             return
         student_user_name = str(ctx.user)
-        chat_title = self._create_chat_title_string(user_name=student_user_name)
+        if use_project_manager_prompt:
+            chat_title = self._create_chat_title_string(user_name=student_user_name, task_type="Project")
+        else:
+            chat_title = self._create_chat_title_string(user_name=student_user_name)
+
         logger.info(f"Starting chat {chat_title}")
 
         title_card_embed = await self._make_title_card_embed(str(ctx.user), chat_title)
@@ -67,7 +78,8 @@ class ChatCog(discord.Cog):
 
         await self._spawn_thread(message=message,
                                  student_user_name=student_user_name,
-                                 initial_text_input=initial_text_input)
+                                 initial_text_input=initial_text_input,
+                                 use_project_manager_prompt=use_project_manager_prompt)
 
     @discord.Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
@@ -141,20 +153,25 @@ class ChatCog(discord.Cog):
             logger.error(e)
             await response_message.edit(content=f"Whoops! Something went wrong! 😅 \nHere is the error:\n ```\n{e}\n```")
 
-    def _create_chat_title_string(self, user_name: str) -> str:
-        return f"{user_name}'s chat with {self._discord_bot.user.name}"
+    def _create_chat_title_string(self, user_name: str, task_type: str = None) -> str:
+        if task_type is None:
+            return f"{user_name}'s chat with {self._discord_bot.user.name}"
+
+        return f"{user_name}'s - {task_type} Chat"
 
     async def _spawn_thread(self,
                             message: discord.Message,
                             student_user_name: str,
                             initial_text_input: str = None,
+                            use_project_manager_prompt: bool = False
                             ):
 
         chat_title = self._create_chat_title_string(user_name=student_user_name)
         thread = await message.create_thread(name=chat_title)
 
         chat = await self._create_chat(thread=thread,
-                                       student_discord_username=student_user_name, )
+                                       student_discord_username=student_user_name,
+                                       use_project_manager_prompt=use_project_manager_prompt)
 
         if initial_text_input is None:
             initial_text_input = f"A human has requested a chat!"
@@ -168,13 +185,15 @@ class ChatCog(discord.Cog):
 
     async def _create_chat(self,
                            thread: discord.Thread,
-                           student_discord_username: str, ) -> Chat:
+                           student_discord_username: str,
+                           use_project_manager_prompt: bool = False) -> Chat:
 
         if thread.id in self._active_threads:
             logger.warning(f"Thread {thread.id} already exists! Returning existing chat")
             return self._active_threads[thread.id]
 
-        assistant = await self._get_assistant(thread, student_discord_username=student_discord_username)
+        assistant = await self._get_assistant(thread, student_discord_username=student_discord_username,
+                                              use_project_manager_prompt=use_project_manager_prompt)
 
         chat = Chat(
             title=self._create_chat_title_string(user_name=student_discord_username),
@@ -188,9 +207,14 @@ class ChatCog(discord.Cog):
     async def _get_assistant(self,
                              thread: discord.Thread,
                              student_discord_username: str,
-                             prompt: str = GENERAL_COURSE_ASSISTANT_SYSTEM_TEMPLATE,
-                             ):
+                             use_project_manager_prompt: bool = False)-> CourseAssistant:
+
         student_summary = self._mongo_database.get_student_summary(discord_username=student_discord_username)
+
+        if use_project_manager_prompt:
+            prompt = PROJECT_MANAGER_TASK_PROMPT
+        else:
+            prompt = GENERAL_COURSE_ASSISTANT_SYSTEM_TEMPLATE
 
         assistant = CourseAssistant(prompt=prompt,
                                     student_summary=student_summary,
@@ -201,10 +225,10 @@ class ChatCog(discord.Cog):
             await assistant.load_memory_from_thread(thread=thread,
                                                     bot_name=str(self._discord_bot.user))
 
-            prefix = f"> Memory reloaded from thread - Here's what we told the bot: ```{TIME_PASSED_MESSAGE}```> ...and it replied:"
+            prefix = f"> Memory reloaded from thread - Here's what we told the bot: \n```\n{TIME_PASSED_MESSAGE}\n```\n> ...and it replied:"
             await message.edit(content=f"{prefix}\n\n...")
             bot_response = await assistant.async_process_input(input_text=TIME_PASSED_MESSAGE)
-            reply = f"{prefix}\n\n{bot_response}"
+            reply = f"{prefix}\n\n{bot_response}\n-------\n-------\n"
             await message.edit(content=reply)
         return assistant
 

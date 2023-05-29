@@ -2,7 +2,7 @@ import asyncio
 
 from dotenv import load_dotenv
 
-from chatbot.bots.assistants.course_assistant.prompts.course_assistant_prompt import \
+from chatbot.bots.assistants.course_assistant.prompts.general_course_assistant_prompt import \
     GENERAL_COURSE_ASSISTANT_SYSTEM_TEMPLATE
 
 load_dotenv()
