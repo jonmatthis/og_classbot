@@ -1,4 +1,3 @@
-import time
 from datetime import datetime
 from pathlib import Path
 from typing import Union
@@ -8,6 +7,8 @@ DATABASE_BACKUP = "database_backup"
 BASE_DATA_FOLDER_NAME = "chatbot_data"
 
 LOG_FILE_FOLDER_NAME = "logs"
+
+STUDENT_PROFILES_COLLECTION_NAME = "student_profiles"
 
 
 

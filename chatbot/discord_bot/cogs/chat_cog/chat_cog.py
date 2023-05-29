@@ -8,7 +8,8 @@ import discord
 from pydantic import BaseModel
 
 from chatbot.bots.assistants.course_assistant.course_assistant import CourseAssistant
-from chatbot.bots.workers.student_profile_builder.student_profile_builder import StudentProfileBuilder
+from chatbot.bots.assistants.course_assistant.prompts.course_assistant_prompt import \
+    GENERAL_COURSE_ASSISTANT_SYSTEM_TEMPLATE
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
 from chatbot.system.environment_variables import get_admin_users
 
@@ -34,13 +35,6 @@ class Chat(BaseModel):
         arbitrary_types_allowed = True
 
 
-def get_assistant(assistant_type: str, **kwargs):
-    if assistant_type == "introduction":
-        return StudentProfileBuilder(**kwargs)
-
-    return CourseAssistant(**kwargs)
-
-
 class ChatCog(discord.Cog):
     def __init__(self,
                  bot: discord.Bot,
@@ -64,14 +58,15 @@ class ChatCog(discord.Cog):
         if not ctx.channel.id in self._allowed_channels:
             logger.info(f"Channel {ctx.channel.id} is not allowed to start a chat")
             return
-
-        chat_title = self._create_chat_title_string(str(ctx.user))
+        student_user_name = str(ctx.user)
+        chat_title = self._create_chat_title_string(user_name=student_user_name)
         logger.info(f"Starting chat {chat_title}")
 
         title_card_embed = await self._make_title_card_embed(str(ctx.user), chat_title)
         message = await ctx.send(embed=title_card_embed)
 
         await self._spawn_thread(message=message,
+                                 student_user_name=student_user_name,
                                  initial_text_input=initial_text_input)
 
     @discord.Cog.listener()
@@ -94,9 +89,11 @@ class ChatCog(discord.Cog):
             channel = self._discord_bot.get_channel(payload.channel_id)
             message = await channel.fetch_message(payload.message_id)
 
+            student_user_name = str(message.author)
             await self._spawn_thread(message=message,
-                                     initial_text_input=message.content
-                                     )
+                                     initial_text_input=message.content,
+                                     student_user_name=student_user_name)
+
 
         except Exception as e:
             print(f'Error: {e}')
@@ -124,7 +121,8 @@ class ChatCog(discord.Cog):
             chat = self._active_threads[thread.id]
         except KeyError:
             chat = await self._create_chat(thread=thread,
-                                           title=self._create_chat_title_string(str(message.author)))
+                                           student_discord_username=str(message.author)
+                                           )
 
         logger.info(f"Sending message to the agent: {message.content}")
 
@@ -141,21 +139,22 @@ class ChatCog(discord.Cog):
 
         except Exception as e:
             logger.error(e)
-            await response_message.edit(content=f"Oh no, something went wrong! \nHere is the error:\n ```\n{e}\n```")
+            await response_message.edit(content=f"Whoops! Something went wrong! 😅 \nHere is the error:\n ```\n{e}\n```")
 
     def _create_chat_title_string(self, user_name: str) -> str:
         return f"{user_name}'s chat with {self._discord_bot.user.name}"
 
     async def _spawn_thread(self,
                             message: discord.Message,
+                            student_user_name: str,
                             initial_text_input: str = None,
                             ):
-        user_name = str(message.author)
-        chat_title = self._create_chat_title_string(user_name=user_name)
+
+        chat_title = self._create_chat_title_string(user_name=student_user_name)
         thread = await message.create_thread(name=chat_title)
 
         chat = await self._create_chat(thread=thread,
-                                       title=chat_title, )
+                                       student_discord_username=student_user_name, )
 
         if initial_text_input is None:
             initial_text_input = f"A human has requested a chat!"
@@ -164,18 +163,38 @@ class ChatCog(discord.Cog):
             await chat.thread.send(
                 embed=self._initial_message_embed(message=message, initial_message=initial_text_input))
 
-        await self._async_send_message_to_bot(chat=chat, input_text=initial_text_input)
+        await self._async_send_message_to_bot(chat=chat,
+                                              input_text=initial_text_input)
 
     async def _create_chat(self,
                            thread: discord.Thread,
-                           title: str,) -> Chat:
+                           student_discord_username: str, ) -> Chat:
 
         if thread.id in self._active_threads:
             logger.warning(f"Thread {thread.id} already exists! Returning existing chat")
             return self._active_threads[thread.id]
 
-        assistant = CourseAssistant()
+        assistant = await self._get_assistant(thread, student_discord_username=student_discord_username)
 
+        chat = Chat(
+            title=self._create_chat_title_string(user_name=student_discord_username),
+            thread=thread,
+            assistant=assistant
+        )
+
+        self._active_threads[thread.id] = chat
+        return chat
+
+    async def _get_assistant(self,
+                             thread: discord.Thread,
+                             student_discord_username: str,
+                             prompt: str = GENERAL_COURSE_ASSISTANT_SYSTEM_TEMPLATE,
+                             ):
+        student_summary = self._mongo_database.get_student_summary(discord_username=student_discord_username)
+
+        assistant = CourseAssistant(prompt=prompt,
+                                    student_summary=student_summary,
+                                    )
         if thread.message_count > 0:
             message = await thread.send(
                 f"Reloading memory from thread (might take a while if this was a long conversation)...")
@@ -187,16 +206,7 @@ class ChatCog(discord.Cog):
             bot_response = await assistant.async_process_input(input_text=TIME_PASSED_MESSAGE)
             reply = f"{prefix}\n\n{bot_response}"
             await message.edit(content=reply)
-
-
-        chat = Chat(
-            title=title,
-            thread=thread,
-            assistant=assistant
-        )
-
-        self._active_threads[thread.id] = chat
-        return chat
+        return assistant
 
     async def _make_title_card_embed(self, user_name: str, chat_title: str):
         return discord.Embed(

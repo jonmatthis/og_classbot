@@ -1,11 +1,10 @@
-import hashlib
 import logging
 
 import discord
 from discord.ext import commands
 
 from chatbot.system.environment_variables import get_admin_users
-from chatbot.system.filenames_and_paths import get_current_date_time_string, get_default_database_json_save_path, \
+from chatbot.system.filenames_and_paths import get_default_database_json_save_path, \
     get_thread_backups_collection_name
 
 logger = logging.getLogger(__name__)

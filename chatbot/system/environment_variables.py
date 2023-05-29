@@ -1,7 +1,8 @@
+import os
 from typing import List
 
 from dotenv import load_dotenv
-import os
+
 load_dotenv()
 
 def get_admin_users()->List[str]:

@@ -2,7 +2,8 @@ import asyncio
 
 from dotenv import load_dotenv
 
-from chatbot.bots.assistants.course_assistant.course_assistant_prompt import COURSE_ASSISTANT_SYSTEM_TEMPLATE
+from chatbot.bots.assistants.course_assistant.prompts.course_assistant_prompt import \
+    GENERAL_COURSE_ASSISTANT_SYSTEM_TEMPLATE
 
 load_dotenv()
 from langchain import LLMChain, OpenAI
@@ -10,17 +11,17 @@ from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.chat_models import ChatOpenAI
 from langchain.memory import ConversationSummaryBufferMemory
 from langchain.prompts import (
-    SystemMessagePromptTemplate,
     HumanMessagePromptTemplate,
-    ChatPromptTemplate,
+    ChatPromptTemplate, SystemMessagePromptTemplate,
 )
-
 
 
 class CourseAssistant:
     def __init__(self,
                  temperature=0.8,
                  model_name="gpt-4",
+                 prompt: str = GENERAL_COURSE_ASSISTANT_SYSTEM_TEMPLATE,
+                 student_summary: str = None,
                  ):
         self._chat_llm = ChatOpenAI(
             streaming=True,
@@ -28,11 +29,18 @@ class CourseAssistant:
             temperature=temperature,
             model_name=model_name,
         )
+        if student_summary is None:
+            student_summary = ""
+        self._student_summary = student_summary
 
-        self._chat_prompt = self._create_chat_prompt()
+        self._prompt = self._create_prompt(prompt_template=prompt)
         self._memory = self._configure_memory()
 
         self._chain = self._create_llm_chain()
+
+    @property
+    def task(self):
+        return self._task
 
     def _configure_memory(self):
 
@@ -42,15 +50,18 @@ class CourseAssistant:
 
     def _create_llm_chain(self):
         return LLMChain(llm=self._chat_llm,
-                        prompt=self._chat_prompt,
+                        prompt=self._prompt,
                         memory=self._memory,
                         verbose=True,
                         )
 
-    def _create_chat_prompt(self):
+    def _create_prompt(self, prompt_template: str):
         self._system_message_prompt = SystemMessagePromptTemplate.from_template(
-            COURSE_ASSISTANT_SYSTEM_TEMPLATE
+            prompt_template
         )
+        self._system_message_prompt.prompt = self._system_message_prompt.prompt.partial(
+            student_summary=self._student_summary)
+
         human_template = "{human_input}"
         human_message_prompt = HumanMessagePromptTemplate.from_template(
             human_template
@@ -84,7 +95,7 @@ class CourseAssistant:
 
             print("\n")
 
-    async def load_memory_from_thread(self, thread, bot_name:str):
+    async def load_memory_from_thread(self, thread, bot_name: str):
         async for message in thread.history(limit=None, oldest_first=True):
             if message.content == "":
                 continue
@@ -92,7 +103,6 @@ class CourseAssistant:
                 self._memory.chat_memory.add_ai_message(message.content)
             else:
                 self._memory.chat_memory.add_user_message(message.content)
-
 
 
 if __name__ == "__main__":

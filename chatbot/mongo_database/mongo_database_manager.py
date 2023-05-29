@@ -7,10 +7,9 @@ from typing import Any, Union
 
 from pymongo import MongoClient
 
-from chatbot.system.environment_variables import get_mongo_uri, get_mongo_database_name, \
-    get_mongo_chat_history_collection_name
-from chatbot.system.filenames_and_paths import get_base_data_folder_path, get_default_database_json_save_path, \
-    get_current_date_time_string
+from chatbot.system.environment_variables import get_mongo_uri, get_mongo_database_name
+from chatbot.system.filenames_and_paths import get_default_database_json_save_path, \
+    STUDENT_PROFILES_COLLECTION_NAME
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +68,18 @@ class MongoDatabaseManager:
 
     def close(self):
         self._client.close()
+
+    def get_student_summary(self, discord_username:str):
+        student_profile =  self._database[STUDENT_PROFILES_COLLECTION_NAME].find_one({"discord_username": discord_username})
+
+        try:
+            return student_profile["student_summary"]
+        except Exception as e:
+            logger.error(f"Error getting student summary for {discord_username}: {e}")
+            return None
+
+
+
 
 if __name__ == "__main__":
     MONGO_URI = 'mongodb://localhost:27017'  # run locally
