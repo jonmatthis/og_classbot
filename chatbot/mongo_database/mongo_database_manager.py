@@ -9,7 +9,7 @@ from pymongo import MongoClient
 
 from chatbot.system.environment_variables import get_mongo_uri, get_mongo_database_name
 from chatbot.system.filenames_and_paths import get_default_database_json_save_path, \
-    STUDENT_PROFILES_COLLECTION_NAME
+    STUDENT_PROFILES_COLLECTION_NAME, STUDENT_SUMMARIES_COLLECTION_NAME
 
 logger = logging.getLogger(__name__)
 
@@ -71,18 +71,14 @@ class MongoDatabaseManager:
     def close(self):
         self._client.close()
 
-    def get_student_profile(self, discord_username: str):
-        return self._database[STUDENT_PROFILES_COLLECTION_NAME].find_one(
-            {"discord_username": discord_username})
 
     def get_student_summary(self, discord_username: str):
-        student_profile = self.get_student_profile(discord_username=discord_username)
+        student_entry = self._database[STUDENT_SUMMARIES_COLLECTION_NAME].find_one({"discord_username": discord_username})
+        if student_entry is None:
+            return
 
-        try:
-            return student_profile["student_summary"]
-        except Exception as e:
-            logger.error(f"Error getting student summary for {discord_username}: {e}")
-            return None
+        return student_entry["student_summary"]["summary"]
+
 
 
 if __name__ == "__main__":

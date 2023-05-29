@@ -4,7 +4,7 @@ import os
 
 import discord
 
-from chatbot.discord_bot.cogs.summarizer_cog import SummarizerCog
+from chatbot.discord_bot.cogs.summary_sender_cog import SummarySenderCog
 from chatbot.discord_bot.cogs.thread_scraper_cog.thread_scraper_cog import ThreadScraperCog
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
 from chatbot.system.logging.configure_logging import configure_logging
@@ -79,8 +79,8 @@ async def main():
                                 mongo_database_manager=mongo_database_manager))
     discord_bot.add_cog(ThreadScraperCog(bot=discord_bot,
                                          mongo_database_manager=mongo_database_manager))
-    discord_bot.add_cog(SummarizerCog(bot=discord_bot,
-                                      mongo_database_manager=mongo_database_manager))
+    discord_bot.add_cog(SummarySenderCog(bot=discord_bot,
+                                         mongo_database_manager=mongo_database_manager))
     await discord_bot.start(os.getenv("DISCORD_TOKEN"))
 
 

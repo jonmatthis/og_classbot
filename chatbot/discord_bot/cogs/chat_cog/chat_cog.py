@@ -135,6 +135,8 @@ class ChatCog(discord.Cog):
             chat = await self._create_chat(thread=thread,
                                            student_discord_username=str(message.author)
                                            )
+            await thread.send(f"And then you said...\n ```\n{message.content}\n```\n and the bot replied:")
+
 
         logger.info(f"Sending message to the agent: {message.content}")
 
@@ -221,11 +223,11 @@ class ChatCog(discord.Cog):
                                     )
         if thread.message_count > 0:
             message = await thread.send(
-                f"Reloading memory from thread (might take a while if this was a long conversation)...")
+                f"Reloading memory from thread...")
             await assistant.load_memory_from_thread(thread=thread,
                                                     bot_name=str(self._discord_bot.user))
 
-            prefix = f"> Memory reloaded from thread - Here's what we told the bot: \n```\n{TIME_PASSED_MESSAGE}\n```\n> ...and it replied:"
+            prefix = f"> Memory reloaded from thread - Here's what we told the bot: \n```\n{TIME_PASSED_MESSAGE}\n```\n> ...and they replied:"
             await message.edit(content=f"{prefix}\n\n...")
             bot_response = await assistant.async_process_input(input_text=TIME_PASSED_MESSAGE)
             reply = f"{prefix}\n\n{bot_response}\n-------\n-------\n"
