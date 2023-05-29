@@ -39,9 +39,9 @@ class Chat(BaseModel):
 class ChatCog(discord.Cog):
     def __init__(self,
                  bot: discord.Bot,
-                 mongo_database: MongoDatabaseManager):
+                 mongo_database_manager: MongoDatabaseManager):
         self._discord_bot = bot
-        self._mongo_database = mongo_database
+        self._mongo_database = mongo_database_manager
         self._active_threads = {}
         self._allowed_channels = os.getenv("ALLOWED_CHANNELS").split(",")
         self._allowed_channels = [int(channel) for channel in self._allowed_channels]

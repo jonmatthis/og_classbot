@@ -55,4 +55,5 @@ def get_default_database_json_save_path(filename: str, timestamp: bool = False):
 
 
 def get_thread_backups_collection_name(server_name: str):
-    return f"thread_backups_for_{server_name}"
+
+    return f"thread_backups_for_{server_name.replace(' ', '_')  }"

@@ -3,18 +3,18 @@ from typing import Type
 
 import tiktoken
 from dotenv import load_dotenv
-from langchain import PromptTemplate
+from langchain import PromptTemplate, OpenAI
 from langchain.callbacks import get_openai_callback
 from langchain.chains import LLMChain
-from langchain.chat_models import ChatOpenAI
+from langchain.chains.summarize import load_summarize_chain
+from langchain.chat_models import ChatOpenAI, ChatAnthropic
 from langchain.output_parsers import PydanticOutputParser, OutputFixingParser
 from pydantic import BaseModel
 from pymongo.collection import Collection
 from rich import print
 
-from chatbot.bots.workers.student_profile_builder.models import StudentProfileSchema
-from chatbot.bots.workers.student_profile_builder.student_profile_builder_prompt import \
-    STUDENT_PROFILE_UPDATE_PROMPT_TEMPLATE, STUDENT_SUMMARY_UPDATE_PROMPT_TEMPLATE
+from chatbot.bots.workers.student_profile_builder.student_profile_builder_prompt import STUDENT_SUMMARY_UPDATE_PROMPT_TEMPLATE
+from chatbot.bots.workers.thread_summarizer import REFINE_THREAD_SUMMARY_PROMPT_TEMPLATE
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
 from chatbot.system.filenames_and_paths import get_thread_backups_collection_name
 
@@ -30,22 +30,45 @@ class StudentProfileBuilder:
                  mongo_database: MongoDatabaseManager,
                  thread_collection_name: str,
                  student_profile_collection_name: str,
+                 overwrite_existing: bool = False,
+                 use_anthropic: bool = False,
 
                  ):
-
+        self.overwrite_existing = overwrite_existing
         self._mongo_database = mongo_database
         self._thread_collection = self._mongo_database.get_collection(thread_collection_name)
         self._student_profile_collection_name = student_profile_collection_name
         self._student_profile_collection = self._mongo_database.get_collection(student_profile_collection_name)
 
-        self._student_usernames = self._thread_collection.distinct("thread_owner_name")
+        self.base_summary_prompt = PromptTemplate(
+            template=STUDENT_SUMMARY_UPDATE_PROMPT_TEMPLATE,
+            input_variables=["text"])
 
-        self._smart_llm = ChatOpenAI(model_name='gpt-4')
-        self._not_as_smart_llm = ChatOpenAI(model_name='gpt-3.5-turbo')
+        self.refine_prompt = PromptTemplate(
+            template=REFINE_THREAD_SUMMARY_PROMPT_TEMPLATE,
+            input_variables=["existing_answer", "text"])
 
-        self._configure_llms(student_profile_schema=StudentProfileSchema)
+        if use_anthropic:
+            if os.getenv("ANTHROPIC_API_KEY") is None:
+                raise ValueError("ANTHROPIC_API_KEY not found in environment variables")
+            self.llm = ChatAnthropic(temperature=0, max_tokens_to_sample=1000)
+            self.llm_model = self.llm.model
+            self.dollars_per_token = 0.00000163
+        if not use_anthropic or self.llm is None:
+            self.llm = OpenAI(temperature=0, max_tokens=1000)
+            self.llm_model = self.llm.model_name
+            self.dollars_per_token = 0.00002
 
-    def _configure_llms(self, student_profile_schema: Type[BaseModel]):
+        self.chain = load_summarize_chain(self.llm,
+                                          chain_type="map_reduce",
+                                          verbose=True,
+                                          question_prompt=self.base_summary_prompt,
+                                          refine_prompt=self.refine_prompt
+                                          )
+    def _configure_llm(self, ):
+        self._chain = load_summarize_chain(llm = self._smart_llm,
+                                           chain_type="map_reduce",
+                                           return_intermediate_step=True)
 
         self._student_profile_extractor_parser = PydanticOutputParser(pydantic_object=student_profile_schema)
         student_profile_update_prompt = PromptTemplate(
@@ -68,7 +91,10 @@ class StudentProfileBuilder:
 
         self._summary_update_prompt = PromptTemplate(
             template=STUDENT_SUMMARY_UPDATE_PROMPT_TEMPLATE,
-            input_variables=['current_student_summary', 'conversation_summary', 'conversation'], )
+            input_variables=['current_student_summary',
+                             'conversation_summary',
+                             # 'conversation'
+                             ], )
 
         self._summary_update_chain = LLMChain(
             prompt=self._summary_update_prompt,
@@ -95,21 +121,24 @@ class StudentProfileBuilder:
     def update_student_summary(self,
                                current_student_summary: str,
                                conversation_summary: str,
-                               conversation: str) -> str:
+                               # conversation: str
+                               ) -> str:
 
         return self._summary_update_chain.predict(
             current_student_summary=current_student_summary,
             conversation_summary=conversation_summary,
-            conversation=conversation
+            # conversation=conversation
         )
 
     def retrieve_current_student_summary(self, collection: Collection, query):
         document = collection.find_one(query)
         if document is not None:
-            student_summary = document['student_summary']
-            return student_summary if student_summary else ""
+            try:
+                student_summary = document['student_summary']
+                return student_summary
+            except Exception as e:
+                return ""
 
-        return
 
     def retrieve_current_model(self, collection: Collection, query, pydantic_model: Type[BaseModel]) -> BaseModel:
         document = collection.find_one(query)
@@ -122,11 +151,6 @@ class StudentProfileBuilder:
         except KeyError:
             return pydantic_model()
 
-    def update_mongo(self, collection: Collection, query: dict, data: dict):
-        self._mongo_database.upsert(collection=collection,
-                                    query=query,
-                                    data=data)
-
     def generate_student_profiles(self):
         number_of_students = len(self._student_usernames)
         with get_openai_callback() as cb:
@@ -134,8 +158,8 @@ class StudentProfileBuilder:
                 print(f"-----------------------------------------------------------------------------\n"
                       f"-----------------------------------------------------------------------------\n"
                       f"Generating profile for {student_username}  - {student_number + 1} of {number_of_students}\n"
-                      f"-----------------------------------------------------------------------------\n"
                       f"-----------------------------------------------------------------------------\n")
+
                 mongo_query = {"discord_username": student_username}
                 student_threads = [thread for thread in
                                    self._thread_collection.find({'thread_owner_name': student_username})]
@@ -150,31 +174,21 @@ class StudentProfileBuilder:
                     query=mongo_query)
                 print(f"Current summary (before update):\n{current_student_summary}\n")
 
-                if  current_student_summary is not None:
+                if  current_student_summary is not None and not self.overwrite_existing:
                     print(f"Student Summary already exists - skipping!\n")
                     continue
 
                 self._mongo_database.upsert(collection=self._student_profile_collection_name,
                                             query=mongo_query,
                                             data={"$set": {"threads": student_threads}})
-                for thread in student_threads:
+                for thread_number, thread in enumerate(student_threads):
+                    print(f"--------------Thread#{thread_number}-of-{len(student_threads)}-------------\n")
                     print(f"Updating model based on thread with summary:\n {thread['summary']}\n")
-                    thread_as_str = "\n".join(thread['thread_as_list_of_strings'])
-                    full_thread_token_count = num_tokens_from_string(thread_as_str, model=self._smart_llm.model_name)
-                    if full_thread_token_count > MAX_TOKEN_COUNT:
-                        print(
-                            f"Thread is too long ({full_thread_token_count} tokens), not sending full conversation to model")
-                        thread_as_str = ""
-
-                    # current_student_model = self.update_student_model(summary=thread['summary'],
-                    #                                                   conversation=thread_as_str,
-                    #                                                   current_model=current_student_model)
-                    # print(f"Current model (after update):\n{current_student_model}\n\n---\n\n")
 
                     current_student_summary = self.update_student_summary(
                         current_student_summary=current_student_summary,
-                        conversation_summary=thread['summary'],
-                        conversation=thread_as_str)
+                        conversation_summary=thread['summary'],)
+                        # conversation=thread_as_str)
 
                     print(f"Current summary (after update):\n{current_student_summary}\n\n---\n\n")
                     print(f"OpenAI API callback:\n {cb}\n")
@@ -182,6 +196,8 @@ class StudentProfileBuilder:
                     self._mongo_database.upsert(collection=self._student_profile_collection_name,
                                                 query=mongo_query,
                                                 data={"$set": {"student_summary": current_student_summary}})
+
+        self._mongo_database.save_json(collection_name=self._student_profile_collection_name,)
 
 
 def num_tokens_from_string(string: str, model: str) -> int:
@@ -198,6 +214,6 @@ if __name__ == '__main__':
     student_profile_builder = StudentProfileBuilder(mongo_database=MongoDatabaseManager(),
                                       thread_collection_name=thread_collection_name,
                                       student_profile_collection_name=student_profile_collection_name,
-
+                                    overwrite_existing=True
                                       )
     student_profile_builder.generate_student_profiles()
