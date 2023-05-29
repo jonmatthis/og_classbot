@@ -225,7 +225,7 @@ class ChatCog(discord.Cog):
             await assistant.load_memory_from_thread(thread=thread,
                                                     bot_name=str(self._discord_bot.user))
 
-            await message.edit(content=f"> Done! Bot memory loaded from thread history.")
+            await message.edit(content=f"> Bot memory loaded from thread history.")
         return assistant
 
     async def _make_title_card_embed(self, user_name: str, chat_title: str):
