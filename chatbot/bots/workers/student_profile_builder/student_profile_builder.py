@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from pymongo.collection import Collection
 from rich import print
 
-from chatbot.bots.workers.student_profile_builder.student_profile_builder_prompt import STUDENT_SUMMARY_UPDATE_PROMPT_TEMPLATE
+from chatbot.bots.workers.student_profile_builder.student_profile_builder_prompt import old_STUDENT_SUMMARY_UPDATE_PROMPT_TEMPLATE
 from chatbot.bots.workers.thread_summarizer import REFINE_THREAD_SUMMARY_PROMPT_TEMPLATE
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
 from chatbot.system.filenames_and_paths import get_thread_backups_collection_name
@@ -41,7 +41,7 @@ class StudentProfileBuilder:
         self._student_profile_collection = self._mongo_database.get_collection(student_profile_collection_name)
 
         self.base_summary_prompt = PromptTemplate(
-            template=STUDENT_SUMMARY_UPDATE_PROMPT_TEMPLATE,
+            template=old_STUDENT_SUMMARY_UPDATE_PROMPT_TEMPLATE,
             input_variables=["text"])
 
         self.refine_prompt = PromptTemplate(
@@ -90,7 +90,7 @@ class StudentProfileBuilder:
         )
 
         self._summary_update_prompt = PromptTemplate(
-            template=STUDENT_SUMMARY_UPDATE_PROMPT_TEMPLATE,
+            template=old_STUDENT_SUMMARY_UPDATE_PROMPT_TEMPLATE,
             input_variables=['current_student_summary',
                              'conversation_summary',
                              # 'conversation'

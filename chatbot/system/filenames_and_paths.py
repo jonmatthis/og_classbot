@@ -9,6 +9,7 @@ BASE_DATA_FOLDER_NAME = "chatbot_data"
 LOG_FILE_FOLDER_NAME = "logs"
 
 STUDENT_PROFILES_COLLECTION_NAME = "student_profiles"
+STUDENT_SUMMARIES_COLLECTION_NAME = "student_summaries"
 
 
 
