@@ -7,14 +7,14 @@ from langchain import PromptTemplate, OpenAI
 from langchain.callbacks import get_openai_callback
 from langchain.chains import LLMChain
 from langchain.chains.summarize import load_summarize_chain
-from langchain.chat_models import ChatOpenAI, ChatAnthropic
+from langchain.chat_models import ChatAnthropic
 from langchain.output_parsers import PydanticOutputParser, OutputFixingParser
 from pydantic import BaseModel
 from pymongo.collection import Collection
 from rich import print
 
 from chatbot.bots.workers.student_profile_builder.student_profile_builder_prompt import old_STUDENT_SUMMARY_UPDATE_PROMPT_TEMPLATE
-from chatbot.bots.workers.thread_summarizer import REFINE_THREAD_SUMMARY_PROMPT_TEMPLATE
+from chatbot.bots.workers.thread_summarizer.thread_summarizer_prompts import REFINE_THREAD_SUMMARY_PROMPT_TEMPLATE
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
 from chatbot.system.filenames_and_paths import get_thread_backups_collection_name
 

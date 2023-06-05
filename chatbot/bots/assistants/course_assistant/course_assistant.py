@@ -46,7 +46,7 @@ class CourseAssistant:
 
         return ConversationSummaryBufferMemory(memory_key="chat_history",
                                                llm=OpenAI(temperature=0),
-                                               max_token_limit=500)
+                                               max_token_limit=1000)
 
     def _create_llm_chain(self):
         return LLMChain(llm=self._chat_llm,
