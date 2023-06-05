@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 
 from chatbot.bots.workers.thread_summarizer.thread_summarizer import logger, ThreadSummarizer
@@ -5,7 +6,8 @@ from chatbot.bots.workers.thread_summarizer.split_thread_data_into_chunks import
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
 from chatbot.system.filenames_and_paths import get_thread_backups_collection_name
 
-
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 async def summarize_threads(server_name: str,
                             collection_name: str = None,
                             overwrite: bool = False,
@@ -20,8 +22,10 @@ async def summarize_threads(server_name: str,
     for thread_entry in thread_collection.find():
 
         if "summary" in thread_entry and not overwrite:
-            logger.info(f"Thread summary already exists, skipping thread: {thread_entry['_id']}")
+            logger.info(f"Thread summary already exists, skipping thread: `{thread_entry['thread_title']}` created at {str(thread_entry['created_at'])}")
             continue
+
+        logger.info(f"Summarizing: `{thread_entry['thread_title']}` created at {str(thread_entry['created_at'])}")
 
         thread_chunks = split_thread_data_into_chunks(messages=thread_entry["messages"])
 

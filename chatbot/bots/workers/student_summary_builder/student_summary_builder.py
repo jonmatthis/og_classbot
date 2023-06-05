@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 from datetime import datetime
 
 import tiktoken
@@ -14,6 +15,7 @@ from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
 from chatbot.system.filenames_and_paths import get_thread_backups_collection_name, STUDENT_SUMMARIES_COLLECTION_NAME
 
 MAX_TOKEN_COUNT = 2048
+DATE_FORMAT = '%Y-%m-%dT%H:%M:%S.%f'
 
 load_dotenv()
 
@@ -38,13 +40,18 @@ class StudentSummaryBuilder:
             template=STUDENT_SUMMARY_BUILDER_PROMPT_TEMPLATE,
             input_variables=["current_student_summary", "new_conversation_summary"])
 
-        self.llm = ChatOpenAI(model_name='gpt-4', temperature=0, max_tokens=1000)
+        self.llm = ChatOpenAI(model_name='gpt-4',
+                              temperature=0,
+                              max_tokens=1000,
+                              openai_api_key = os.getenv("OPENAI_API_KEY"),
+                              )
         self.llm_model = self.llm.model_name
         self.dollars_per_token = 0.00003  # gpt-4
 
         self._summary_update_chain = LLMChain(llm=self.llm,
                                               prompt=self.student_summary_builder_prompt,
                                               verbose=True,
+
                                               )
 
     async def update_student_summary_based_on_new_conversation(self,
@@ -80,8 +87,17 @@ class StudentSummaryBuilder:
 
                     student_summary_entry = self._student_summaries_collection.find_one(
                         {"discord_username": student_username})
+
+
                     try:
                         current_student_summary = student_summary_entry.get("student_summary", "")
+
+                        time_since_last_summary_in_hours = await self._time_since_last_summary(student_summary_entry)
+
+                        if time_since_last_summary_in_hours < 24:
+                            print(f"Time since last summary is {time_since_last_summary_in_hours} hours. Skipping.")
+                            continue
+
                     except Exception as e:
                         current_student_summary = ""
 
@@ -108,6 +124,14 @@ class StudentSummaryBuilder:
                                                         )
 
         self._mongo_database.save_json(collection_name=self._student_summaries_collection_name, )
+
+    async def _time_since_last_summary(self, student_summary_entry):
+        previous_summary_datetime = datetime.strptime(student_summary_entry["student_summary"]["created_at"],
+                                                      DATE_FORMAT)
+        current_time = datetime.now()
+        time_since_last_summary = current_time - previous_summary_datetime
+        time_since_last_summary_in_hours = time_since_last_summary.total_seconds() / 3600
+        return time_since_last_summary_in_hours
 
 
 def num_tokens_from_string(string: str, model: str) -> int:

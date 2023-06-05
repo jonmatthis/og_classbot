@@ -10,6 +10,7 @@ from langchain.schema import Document
 from chatbot.bots.workers.thread_summarizer.thread_summarizer_prompts import THREAD_SUMMARY_PROMPT_TEMPLATE, \
     REFINE_THREAD_SUMMARY_PROMPT_TEMPLATE
 
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
