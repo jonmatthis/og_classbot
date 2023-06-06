@@ -44,7 +44,7 @@ STUDENT_SUMMARY_NEW_SUMMARY_HUMAN_INPUT_PROMPT = """
     If there is not enough information to fill out one of the sections, say "I don't have enough information to fill out this section" and move on to the next section.
     
     Format your output like this:
-    ```
+    ===
     # Student Name:\n 
     # Major/Year:\n
     # Research Interests:\n
@@ -66,5 +66,5 @@ STUDENT_SUMMARY_NEW_SUMMARY_HUMAN_INPUT_PROMPT = """
     # What parts of this summary are you most confident about?\n
     # What parts are you least confident about?\n
     # What are some questions you would like to ask this student?\n
-    ```
+    ===
 """

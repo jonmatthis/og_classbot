@@ -18,6 +18,7 @@ rich = "^13.3.5"
 anthropic = "^0.2.9"
 langchain = "^0.0.190"
 openai = "^0.27.7"
+Markdown = "^3.4.3"
 
 
 [tool.poetry.group.dev.dependencies]
