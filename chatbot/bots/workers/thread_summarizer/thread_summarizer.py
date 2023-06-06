@@ -19,13 +19,22 @@ class ThreadSummarizer:
                  use_anthropic: bool = False,
                  ):
 
-        self.base_summary_prompt = PromptTemplate(
-            template=THREAD_SUMMARY_PROMPT_TEMPLATE,
-            input_variables=["text"])
+        prompt_template = """Write a thorough summary of the following:
 
-        self.refine_prompt = PromptTemplate(
-            template=REFINE_THREAD_SUMMARY_PROMPT_TEMPLATE,
-            input_variables=["existing_answer", "text"])
+
+        "{text}"
+
+
+        SUMMARY:"""
+        self.base_summary_prompt = PromptTemplate(template=prompt_template, input_variables=["text"])
+
+        # self.base_summary_prompt = PromptTemplate(
+        #     template=THREAD_SUMMARY_PROMPT_TEMPLATE,
+        #     input_variables=["text"])
+        #
+        # self.refine_prompt = PromptTemplate(
+        #     template=REFINE_THREAD_SUMMARY_PROMPT_TEMPLATE,
+        #     input_variables=["existing_answer", "text"])
 
         if use_anthropic:
             if os.getenv("ANTHROPIC_API_KEY") is None:
@@ -42,7 +51,7 @@ class ThreadSummarizer:
                                           chain_type="refine",
                                           verbose=True,
                                           question_prompt=self.base_summary_prompt,
-                                          refine_prompt=self.refine_prompt,
+                                          # refine_prompt=self.refine_prompt,
                                           return_refine_steps=True,
                                           )
 

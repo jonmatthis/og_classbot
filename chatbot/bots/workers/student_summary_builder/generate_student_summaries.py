@@ -43,11 +43,11 @@ async def generate_student_summaries(mongo_database: MongoDatabaseManager,
                 if not current_student_summary == "":
                     current_student_summary = current_student_summary.get("summary", "")
 
-                # time_since_last_summary_in_hours = time_since_last_summary(student_summary_entry)
-                #
-                # if time_since_last_summary_in_hours < 24:
-                #     print(f"Time since last summary is {time_since_last_summary_in_hours} hours. Skipping.")
-                #     continue
+                time_since_last_summary_in_hours = time_since_last_summary(student_summary_entry)
+
+                if time_since_last_summary_in_hours < 4:
+                    print(f"Time since last summary is {time_since_last_summary_in_hours} hours. Skipping.")
+                    continue
             except Exception as e:
                 print(f"Error: {e}")
                 current_student_summary = "You have not seen this student before..."
@@ -89,8 +89,12 @@ async def generate_student_summaries(mongo_database: MongoDatabaseManager,
 if __name__ == '__main__':
     server_name = "Neural Control of Real World Human Movement 2023 Summer1"
     thread_collection_name = get_thread_backups_collection_name(server_name=server_name)
-
-    asyncio.run(generate_student_summaries(mongo_database=MongoDatabaseManager(),
+    for attempt in range(10):
+        try:
+            asyncio.run(generate_student_summaries(mongo_database=MongoDatabaseManager(),
                                            thread_collection_name=thread_collection_name,
                                            student_summaries_collection_name=STUDENT_SUMMARIES_COLLECTION_NAME,
                                            use_anthropic=True, ))
+        except Exception as e:
+            print(f"Error: {e}")
+            continue
