@@ -1,17 +1,26 @@
 import json
 import re
+from pathlib import Path
 
 
 class JsonToHTML:
     def __init__(self,
                  json_file_path: str,
+                 csv_file_path: str,
                  schema: dict,
                  output_file: str = "report.html"):
         self.json_file_path = json_file_path
+        self.csv_file_path = csv_file_path
         self.output_file = output_file
         self.schema = schema
-        self.toc = []
-
+        self.table_of_contents = []
+        self.names = self.read_csv_data()
+    def read_csv_data(self):
+        import csv
+        with open(self.csv_file_path, newline='', encoding='utf-8') as csvfile:
+            reader = csv.DictReader(csvfile)
+            names = {row['discord_username']: row['full_name'] for row in reader}
+        return names
     def read_json_data(self):
         with open(self.json_file_path, "r", encoding="utf-8") as file:
             data = json.load(file)
@@ -34,7 +43,7 @@ class JsonToHTML:
                 html_tag = schema[key].get("html_tag", "p")
                 if html_tag == "h1":
                     html += f"<{html_tag} id='{data['discord_username']}'>{key}</{html_tag}>"
-                    self.toc.append(data['discord_username'])
+                    self.table_of_contents.append(data['discord_username'])
 
                 if isinstance(value, dict) and html_tag != "value":
                     html += process_data(value, schema[key]["fields"], key)
@@ -62,10 +71,10 @@ class JsonToHTML:
         return html
 
     def write_to_html_file(self, html_content: str):
-        toc_html = "<h2>Table of Contents</h2>\n<ul>\n"
-        for username in self.toc:
-            toc_html += f"<li><a href='#{username}'>{username}</a></li>\n"
-        toc_html += "</ul>\n"
+        toc_html = "<h2>Table of Contents</h2>\n<ol>\n"
+        for student_name in self.table_of_contents:
+            toc_html += f"<li><a href='#{student_name}'>{student_name}</a></li>\n"
+        toc_html += "</ol>\n"
 
         html = f"""
         <!doctype html>
@@ -96,13 +105,17 @@ class JsonToHTML:
 
 
 if __name__ == "__main__":
-    json_file_path = r"D:\Dropbox\Northeastern\Courses\neural_control_of_real_world_human_movement\mongo_database_backup\chatbot_data\database_backup\humon-chatbot.student_summaries_complete_2023-06-06.json"
-    output_file = "report.html"
+    json_file_path = r"D:\Dropbox\Northeastern\Courses\neural_control_of_real_world_human_movement\course_data\mongo_database_backup\chatbot_data\database_backup\humon-chatbot.student_summaries_complete_2023-06-06.json"
+    csv_file_path = r"D:\Dropbox\Northeastern\Courses\neural_control_of_real_world_human_movement\course_data\student_info\student_info_combined.csv"
+    output_file_path = str(Path(json_file_path).parent.parent.parent.parent / "student_report.html")
 
     schema = {
         "discord_username": {"html_tag": "h1", "fields": {}},
         "student_summary": {"html_tag": "h2", "fields": {"summary": {"html_tag": "value", "fields": {}}}}
     }
 
-    converter = JsonToHTML(json_file_path=json_file_path, schema=schema, output_file=output_file)
+    converter = JsonToHTML(json_file_path=json_file_path,
+                           csv_file_path=csv_file_path,
+                           schema=schema,
+                           output_file=output_file_path)
     converter.generate_report()
