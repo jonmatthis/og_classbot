@@ -39,6 +39,7 @@ class StudentSummaryBuilder:
             self.llm = ChatOpenAI(model_name='gpt-4',
                                   temperature=0,
                                   callbacks=[StreamingStdOutCallbackHandler()],
+                                  streaming=True,
                                   max_tokens=4000,
                                   )
             self.llm_model = self.llm.model_name
@@ -46,7 +47,7 @@ class StudentSummaryBuilder:
 
         self._llm_chain = LLMChain(llm=self.llm,
                                    prompt=self.student_summary_builder_prompt,
-                                   memory=self._memory,
+                                   # memory=self._memory,
                                    verbose=True,
                                    )
 
