@@ -1,18 +1,17 @@
-import asyncio
 import logging
 import os
 from datetime import datetime
 
 import tiktoken
 from dotenv import load_dotenv
-from langchain import PromptTemplate, LLMChain
-from langchain.callbacks import get_openai_callback
-from langchain.chat_models import ChatOpenAI
+from langchain import LLMChain
+from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
+from langchain.chat_models import ChatOpenAI, ChatAnthropic
+from langchain.memory import ConversationBufferMemory
+from langchain.prompts import HumanMessagePromptTemplate, ChatPromptTemplate, SystemMessagePromptTemplate
 
 from chatbot.bots.workers.student_summary_builder.student_summary_builder_prompts import \
-    STUDENT_SUMMARY_BUILDER_PROMPT_TEMPLATE
-from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
-from chatbot.system.filenames_and_paths import get_thread_backups_collection_name, STUDENT_SUMMARIES_COLLECTION_NAME
+    STUDENT_SUMMARY_BUILDER_PROMPT_SYSTEM_TEMPLATE, STUDENT_SUMMARY_NEW_SUMMARY_HUMAN_INPUT_PROMPT
 
 MAX_TOKEN_COUNT = 2048
 DATE_FORMAT = '%Y-%m-%dT%H:%M:%S.%f'
@@ -24,114 +23,66 @@ logger = logging.getLogger(__name__)
 
 class StudentSummaryBuilder:
     def __init__(self,
-                 mongo_database: MongoDatabaseManager,
-                 thread_collection_name: str,
-                 student_summaries_collection_name: str,
                  use_anthropic: bool = False,
+                 current_summary: str = None,
                  ):
-        self._mongo_database = mongo_database
-        self._thread_collection = self._mongo_database.get_collection(thread_collection_name)
-        self._student_summaries_collection_name = student_summaries_collection_name
-        self._student_summaries_collection = self._mongo_database.get_collection(student_summaries_collection_name)
 
-        self._student_usernames = self._thread_collection.distinct("thread_owner_name")
+        self.student_summary_builder_prompt = self._create_chat_prompt(current_summary=current_summary)
+        self._memory = ConversationBufferMemory()
+        if use_anthropic:
+            if os.getenv("ANTHROPIC_API_KEY") is None:
+                raise ValueError("ANTHROPIC_API_KEY not found in environment variables")
+            self.llm = ChatAnthropic(temperature=0, max_tokens_to_sample=1000)
+            self.llm_model = self.llm.model
+            self.dollars_per_token = 0.00000163
+        else:
+            self.llm = ChatOpenAI(model_name='gpt-4',
+                                  temperature=0,
+                                  callbacks=[StreamingStdOutCallbackHandler()],
+                                  max_tokens=4000,
+                                  )
+            self.llm_model = self.llm.model_name
+            self.dollars_per_token = 0.00003  # gpt-4
 
-        self.student_summary_builder_prompt = PromptTemplate(
-            template=STUDENT_SUMMARY_BUILDER_PROMPT_TEMPLATE,
-            input_variables=["current_student_summary", "new_conversation_summary"])
+        self._llm_chain = LLMChain(llm=self.llm,
+                                   prompt=self.student_summary_builder_prompt,
+                                   memory=self._memory,
+                                   verbose=True,
+                                   )
 
-        self.llm = ChatOpenAI(model_name='gpt-4',
-                              temperature=0,
-                              max_tokens=1000,
-                              openai_api_key = os.getenv("OPENAI_API_KEY"),
-                              )
-        self.llm_model = self.llm.model_name
-        self.dollars_per_token = 0.00003  # gpt-4
+    def _create_chat_prompt(self, current_summary: str):
+        system_message_prompt = SystemMessagePromptTemplate.from_template(
+            template=STUDENT_SUMMARY_BUILDER_PROMPT_SYSTEM_TEMPLATE,
+            input_variables={"current_summary": current_summary})
+        # system_message_prompt.prompt = system_message_prompt.prompt.format(
+        #     current_summary=current_summary
+        # )
 
-        self._summary_update_chain = LLMChain(llm=self.llm,
-                                              prompt=self.student_summary_builder_prompt,
-                                              verbose=True,
-
-                                              )
+        human_message_prompt = HumanMessagePromptTemplate.from_template(
+            template = STUDENT_SUMMARY_NEW_SUMMARY_HUMAN_INPUT_PROMPT,
+            input_variables = ["new_conversation_summary"]
+        )
+        return ChatPromptTemplate.from_messages(
+            [system_message_prompt, human_message_prompt]
+        )
 
     async def update_student_summary_based_on_new_conversation(self,
                                                                current_student_summary: str,
                                                                new_conversation_summary: str,
                                                                ) -> str:
 
-        return await self._summary_update_chain.apredict(
-            current_student_summary=current_student_summary,
+        return await self._llm_chain.arun(
+            current_summary=current_student_summary,
             new_conversation_summary=new_conversation_summary,
         )
 
-    async def generate_student_summaries(self):
-        number_of_students = len(self._student_usernames)
-        with get_openai_callback() as cb:
-            for student_number, student_username in enumerate(self._student_usernames):
-                print(f"-----------------------------------------------------------------------------\n"
-                      f"Generating profile for {student_username}"
-                      f"Student#{student_number + 1} of {number_of_students}\n"
-                      f"-----------------------------------------------------------------------------\n")
-
-                student_threads = [thread for thread in
-                                   self._thread_collection.find({'thread_owner_name': student_username})]
-
-                self._mongo_database.upsert(collection=self._student_summaries_collection_name,
-                                            query={"discord_username": student_username},
-                                            data={"$set": {"threads": student_threads}})
-
-                for thread_number, thread in enumerate(student_threads):
-                    thread_summary = thread['summary']['summary']
-                    print(f"---------Incorporating Thread#{thread_number + 1}-of-{len(student_threads)}-------------\n")
-                    print(f"Updating student summary based on thread with summary:\n {thread_summary}\n")
-
-                    student_summary_entry = self._student_summaries_collection.find_one(
-                        {"discord_username": student_username})
-
-
-                    try:
-                        current_student_summary = student_summary_entry.get("student_summary", "")
-
-                        time_since_last_summary_in_hours = await self._time_since_last_summary(student_summary_entry)
-
-                        if time_since_last_summary_in_hours < 24:
-                            print(f"Time since last summary is {time_since_last_summary_in_hours} hours. Skipping.")
-                            continue
-
-                    except Exception as e:
-                        current_student_summary = ""
-
-                    print(f"Current student summary (before update):\n{current_student_summary}\n")
-
-                    updated_student_summary = await self.update_student_summary_based_on_new_conversation(
-                        current_student_summary=current_student_summary,
-                        new_conversation_summary=thread_summary, )
-
-                    print(f"Updated summary (after update):\n{updated_student_summary}\n\n---\n\n")
-                    print(f"OpenAI API callback:\n {cb}\n")
-
-                    self._mongo_database.upsert(collection=self._student_summaries_collection_name,
-                                                query={"discord_username": student_username},
-                                                data={"$set": {"student_summary": {"summary": updated_student_summary,
-                                                                                   "created_at": datetime.now().isoformat(),
-                                                                                   "model": self.llm_model}}},
-                                                )
-                    if student_summary_entry is not None:
-                        if "student_summary" in student_summary_entry:
-                            self._mongo_database.upsert(collection=self._student_summaries_collection_name,
-                                                        query={"discord_username": student_username},
-                                                        data={"$push": {"previous_summaries": student_summary_entry["student_summary"]}}
-                                                        )
-
-        self._mongo_database.save_json(collection_name=self._student_summaries_collection_name, )
-
-    async def _time_since_last_summary(self, student_summary_entry):
-        previous_summary_datetime = datetime.strptime(student_summary_entry["student_summary"]["created_at"],
-                                                      DATE_FORMAT)
-        current_time = datetime.now()
-        time_since_last_summary = current_time - previous_summary_datetime
-        time_since_last_summary_in_hours = time_since_last_summary.total_seconds() / 3600
-        return time_since_last_summary_in_hours
+def time_since_last_summary(student_summary_entry):
+    previous_summary_datetime = datetime.strptime(student_summary_entry["student_summary"]["created_at"],
+                                                  DATE_FORMAT)
+    current_time = datetime.now()
+    time_since_last_summary = current_time - previous_summary_datetime
+    time_since_last_summary_in_hours = time_since_last_summary.total_seconds() / 3600
+    return time_since_last_summary_in_hours
 
 
 def num_tokens_from_string(string: str, model: str) -> int:
@@ -140,12 +91,3 @@ def num_tokens_from_string(string: str, model: str) -> int:
     num_tokens = len(encoding.encode(string))
     return num_tokens
 
-
-if __name__ == '__main__':
-    server_name = "Neural Control of Real World Human Movement 2023 Summer1"
-    thread_collection_name = get_thread_backups_collection_name(server_name=server_name)
-    student_profile_builder = StudentSummaryBuilder(mongo_database=MongoDatabaseManager(),
-                                                    thread_collection_name=thread_collection_name,
-                                                    student_summaries_collection_name=STUDENT_SUMMARIES_COLLECTION_NAME,
-                                                    )
-    asyncio.run(student_profile_builder.generate_student_summaries())

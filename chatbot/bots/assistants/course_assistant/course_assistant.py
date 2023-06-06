@@ -39,8 +39,6 @@ class CourseAssistant:
         self._chain = self._create_llm_chain()
 
     @property
-    def task(self):
-        return self._task
 
     def _configure_memory(self):
 
