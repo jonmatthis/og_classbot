@@ -72,5 +72,5 @@ if __name__ == "__main__":
     import asyncio
 
     asyncio.run(summarize_threads(server_name="Neural Control of Real World Human Movement 2023 Summer1",
-                                  overwrite=True,
+                                  overwrite=False,
                                   save_to_json=True))

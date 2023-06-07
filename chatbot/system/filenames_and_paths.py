@@ -10,6 +10,7 @@ LOG_FILE_FOLDER_NAME = "logs"
 
 STUDENT_PROFILES_COLLECTION_NAME = "student_profiles"
 STUDENT_SUMMARIES_COLLECTION_NAME = "student_summaries"
+CLASS_SUMMARY_COLLECTION_NAME = "class_summary"
 
 
 

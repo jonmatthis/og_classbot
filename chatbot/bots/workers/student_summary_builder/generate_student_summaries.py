@@ -12,7 +12,8 @@ from chatbot.system.filenames_and_paths import get_thread_backups_collection_nam
 async def generate_student_summaries(mongo_database: MongoDatabaseManager,
                                      thread_collection_name: str,
                                      student_summaries_collection_name: str,
-                                     use_anthropic: bool = False
+                                     use_anthropic: bool = False,
+                                     overwrite: bool = False,
                                      ):
 
     thread_collection = mongo_database.get_collection(thread_collection_name)
@@ -42,12 +43,9 @@ async def generate_student_summaries(mongo_database: MongoDatabaseManager,
                 current_student_summary = student_summary_entry.get("student_summary", "")
                 if not current_student_summary == "":
                     current_student_summary = current_student_summary.get("summary", "")
+                    current_summary_created_at = student_summary_entry["student_summary"]["created_at"]
+                    current_student_summary_created_at_datetime = datetime.strptime(current_summary_created_at, '%Y-%m-%dT%H:%M:%S.%f')
 
-                time_since_last_summary_in_hours = time_since_last_summary(student_summary_entry)
-
-                if time_since_last_summary_in_hours < 4:
-                    print(f"Time since last summary is {time_since_last_summary_in_hours} hours. Skipping.")
-                    continue
             except Exception as e:
                 print(f"Error: {e}")
                 current_student_summary = "You have not seen this student before..."
@@ -56,6 +54,15 @@ async def generate_student_summaries(mongo_database: MongoDatabaseManager,
 
             for thread_number, thread in enumerate(student_threads):
                 thread_summary = thread['summary']['summary']
+                thread_summary_created_at = thread['summary']['created_at']
+                thread_summary_created_at_datetime = datetime.strptime(thread_summary_created_at, '%Y-%m-%dT%H:%M:%S.%f')
+
+                if not overwrite:
+                    timedelta = thread_summary_created_at_datetime - current_student_summary_created_at_datetime
+                    if timedelta.total_seconds() < 0:
+                        print("Skipping thread because it is older than the current summary (i.e. it has already been incorporated into the summary)")
+                        continue
+
                 print(f"---------Incorporating Thread#{thread_number + 1}-of-{len(student_threads)}-------------\n")
                 print(f"Updating student summary based on thread with summary:\n {thread_summary}\n")
 
