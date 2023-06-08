@@ -27,8 +27,7 @@ class VideoChatterCog(discord.Cog):
         self._discord_bot = bot
         self._mongo_database = mongo_database_manager
         self._active_threads = {}
-        self._allowed_channels = os.getenv("ALLOWED_CHANNELS").split(",")
-        self._allowed_channels = [int(channel) for channel in self._allowed_channels]
+        self._allowed_channels = [VIDEO_CHAT_CHANNEL_ID, 1090810901017403392]
         self._course_assistant_llm_chains = {}
 
     @discord.slash_command(name="video_chatter", description="Chat with the bot about a video!")
@@ -36,6 +35,10 @@ class VideoChatterCog(discord.Cog):
                    ctx: discord.ApplicationContext):
 
         student_user_name = str(ctx.user)
+
+        if not ctx.channel.id in self._allowed_channels:
+            logger.info(f"You can only talk with the VideoChatter in the video chat channel!")
+            return
 
         chat_title = self._create_chat_title_string(user_name=student_user_name)
 
@@ -55,7 +58,7 @@ class VideoChatterCog(discord.Cog):
         if message.author.id == self._discord_bot.user.id:
             return
 
-        if not message.channel.id == VIDEO_CHAT_CHANNEL_ID:
+        if not message.channel.parent_id in self._allowed_channels:
             logger.info(f"You can only talk with the VideoChatter in the video chat channel!")
             return
 
@@ -101,15 +104,13 @@ class VideoChatterCog(discord.Cog):
                             message: discord.Message,
                             student_user_name: str,
                             initial_text_input: str = None,
-                            use_project_manager_prompt: bool = False
                             ):
 
         chat_title = self._create_chat_title_string(user_name=student_user_name)
         thread = await message.create_thread(name=chat_title)
 
         chat = await self._create_chat(thread=thread,
-                                       student_discord_username=student_user_name,
-                                       use_project_manager_prompt=use_project_manager_prompt)
+                                       student_discord_username=student_user_name)
 
         if initial_text_input is None:
             initial_text_input = f"A human has requested a chat!"

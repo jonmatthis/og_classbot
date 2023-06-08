@@ -2,7 +2,7 @@ import logging
 import os
 import uuid
 from datetime import datetime
-from typing import List
+from typing import List, Union
 
 import discord
 from pydantic import BaseModel
@@ -11,6 +11,7 @@ from chatbot.bots.assistants.course_assistant.course_assistant import CourseAssi
 from chatbot.bots.assistants.course_assistant.prompts.general_course_assistant_prompt import \
     GENERAL_COURSE_ASSISTANT_SYSTEM_TEMPLATE
 from chatbot.bots.assistants.course_assistant.prompts.project_manager_prompt import PROJECT_MANAGER_TASK_PROMPT
+from chatbot.bots.assistants.video_chatter.video_chatter import VideoChatter
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
 from chatbot.system.environment_variables import get_admin_users
 
@@ -26,7 +27,7 @@ logger = logging.getLogger(__name__)
 class Chat(BaseModel):
     title: str
     thread: discord.Thread
-    assistant: CourseAssistant
+    assistant: Union[CourseAssistant, VideoChatter]
 
     started_at: str = datetime.now().isoformat()
     chat_id: str = uuid.uuid4()
