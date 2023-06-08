@@ -1,18 +1,13 @@
 import logging
 import os
-import uuid
 from datetime import datetime
-from typing import List
 
 import discord
-from pydantic import BaseModel
 
 from chatbot.bots.assistants.course_assistant.course_assistant import CourseAssistant
-from chatbot.bots.assistants.course_assistant.prompts.general_course_assistant_prompt import \
-    GENERAL_COURSE_ASSISTANT_SYSTEM_TEMPLATE
-from chatbot.bots.assistants.course_assistant.prompts.project_manager_prompt import PROJECT_MANAGER_TASK_PROMPT
+from chatbot.bots.assistants.video_chatter.video_chatter import VideoChatter
+from chatbot.discord_bot.cogs.chat_cog.chat_cog import Chat
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
-from chatbot.system.environment_variables import get_admin_users
 
 TIME_PASSED_MESSAGE = """
 > Some time passed and your memory of this conversation reset needed to be reloaded from the thread, but we're good now!
@@ -22,21 +17,10 @@ TIME_PASSED_MESSAGE = """
 
 logger = logging.getLogger(__name__)
 
-
-class Chat(BaseModel):
-    title: str
-    thread: discord.Thread
-    assistant: CourseAssistant
-
-    started_at: str = datetime.now().isoformat()
-    chat_id: str = uuid.uuid4()
-    messages: List = []
-
-    class Config:
-        arbitrary_types_allowed = True
+VIDEO_CHAT_CHANNEL_ID = 1116380746463060069
 
 
-class ChatCog(discord.Cog):
+class VideoChatterCog(discord.Cog):
     def __init__(self,
                  bot: discord.Bot,
                  mongo_database_manager: MongoDatabaseManager):
@@ -47,69 +31,21 @@ class ChatCog(discord.Cog):
         self._allowed_channels = [int(channel) for channel in self._allowed_channels]
         self._course_assistant_llm_chains = {}
 
-    @discord.slash_command(name="chat", description="Chat with the bot")
-    @discord.option(name="use_project_manager_prompt?",
-                    description="Whether or not this is a project manager prompt",
-                    input_type=bool,
-                    required=False)
-    @discord.option(name="initial_message",
-                    description="The initial message to send to the bot",
-                    input_type=str,
-
-                    required=False)
+    @discord.slash_command(name="video_chatter", description="Chat with the bot about a video!")
     async def chat(self,
-                   ctx: discord.ApplicationContext,
-                   use_project_manager_prompt: bool = False,
-                   initial_text_input: str = None):
-
-        if not ctx.channel.id in self._allowed_channels:
-            logger.info(f"Channel {ctx.channel.id} is not allowed to start a chat")
-            return
+                   ctx: discord.ApplicationContext):
 
         student_user_name = str(ctx.user)
-        if use_project_manager_prompt:
-            chat_title = self._create_chat_title_string(user_name=student_user_name, task_type="Project")
-        else:
-            chat_title = self._create_chat_title_string(user_name=student_user_name)
 
-        logger.info(f"Starting chat {chat_title}")
+        chat_title = self._create_chat_title_string(user_name=student_user_name)
+
+        logger.info(f"Starting video_chatter thread {chat_title}")
 
         title_card_embed = await self._make_title_card_embed(str(ctx.user), chat_title)
         message = await ctx.send(embed=title_card_embed)
 
         await self._spawn_thread(message=message,
-                                 student_user_name=student_user_name,
-                                 initial_text_input=initial_text_input,
-                                 use_project_manager_prompt=use_project_manager_prompt)
-
-    @discord.Cog.listener()
-    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
-        try:
-            # Make sure we won't be replying to ourselves.
-            if payload.user_id == self._discord_bot.user.id:
-                return
-
-            # Make sure we're only responding to the correct emoji
-            if not payload.emoji.name == '🧠':
-                return
-
-            # Make sure we're only responding to the admin users
-            if not payload.user_id in get_admin_users():
-                logger.info(f"User {payload.user_id} is not an admin user")
-                return
-
-            # Get the channel and message using the payload
-            channel = self._discord_bot.get_channel(payload.channel_id)
-            message = await channel.fetch_message(payload.message_id)
-
-            student_user_name = str(message.author)
-            await self._spawn_thread(message=message,
-                                     initial_text_input=message.content,
-                                     student_user_name=student_user_name)
-
-
-        except Exception as e:
-            print(f'Error: {e}')
+                                 student_user_name=student_user_name)
 
     @discord.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -117,6 +53,10 @@ class ChatCog(discord.Cog):
 
         # Make sure we won't be replying to ourselves.
         if message.author.id == self._discord_bot.user.id:
+            return
+
+        if not message.channel.id == VIDEO_CHAT_CHANNEL_ID:
+            logger.info(f"You can only talk with the VideoChatter in the video chat channel!")
             return
 
         # Only respond to messages in threads
@@ -155,10 +95,7 @@ class ChatCog(discord.Cog):
             await response_message.edit(content=f"Whoops! Something went wrong! 😅 \nHere is the error:\n ```\n{e}\n```")
 
     def _create_chat_title_string(self, user_name: str, task_type: str = None) -> str:
-        if task_type is None:
-            return f"{user_name}'s chat with {self._discord_bot.user.name}"
-
-        return f"{user_name}'s - {task_type} Chat"
+        return f"{user_name}'s chat about a video"
 
     async def _spawn_thread(self,
                             message: discord.Message,
@@ -186,15 +123,15 @@ class ChatCog(discord.Cog):
 
     async def _create_chat(self,
                            thread: discord.Thread,
-                           student_discord_username: str,
-                           use_project_manager_prompt: bool = False) -> Chat:
+                           student_discord_username: str) -> Chat:
 
         if thread.id in self._active_threads:
             logger.warning(f"Thread {thread.id} already exists! Returning existing chat")
             return self._active_threads[thread.id]
 
-        assistant = await self._get_assistant(thread, student_discord_username=student_discord_username,
-                                              use_project_manager_prompt=use_project_manager_prompt)
+        assistant = await self._get_assistant(thread,
+                                              student_discord_username=student_discord_username,
+                                              )
 
         chat = Chat(
             title=self._create_chat_title_string(user_name=student_discord_username),
@@ -208,18 +145,9 @@ class ChatCog(discord.Cog):
     async def _get_assistant(self,
                              thread: discord.Thread,
                              student_discord_username: str,
-                             use_project_manager_prompt: bool = False) -> CourseAssistant:
+                             use_project_manager_prompt: bool = False) -> VideoChatter:
 
-        student_summary = self._mongo_database.get_student_summary(discord_username=student_discord_username)
-
-        if use_project_manager_prompt:
-            prompt = PROJECT_MANAGER_TASK_PROMPT
-        else:
-            prompt = GENERAL_COURSE_ASSISTANT_SYSTEM_TEMPLATE
-
-        assistant = CourseAssistant(prompt=prompt,
-                                    student_summary=student_summary,
-                                    )
+        assistant = VideoChatter()
         if thread.message_count > 0:
             message = await thread.send(
                 f"> Reloading bot memory from thread history...")
@@ -232,8 +160,8 @@ class ChatCog(discord.Cog):
     async def _make_title_card_embed(self, user_name: str, chat_title: str):
         return discord.Embed(
             title=chat_title,
-            description=f"A conversation between {user_name} and the bot, started on {datetime.now()}",
-            color=0x25d790,
+            description=f"A conversation between {user_name} and the VideoChatter bot, started on {datetime.now()}",
+            color=0x95d790,
         )
 
     def _initial_message_embed(self, message, initial_message):
