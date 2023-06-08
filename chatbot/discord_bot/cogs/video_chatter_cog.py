@@ -4,7 +4,6 @@ from datetime import datetime
 
 import discord
 
-from chatbot.bots.assistants.course_assistant.course_assistant import CourseAssistant
 from chatbot.bots.assistants.video_chatter.video_chatter import VideoChatter
 from chatbot.discord_bot.cogs.chat_cog.chat_cog import Chat
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
@@ -19,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 VIDEO_CHAT_CHANNEL_ID = 1116380746463060069
 
+MEOWMALINE_YOUTUBE_LINK = "https://www.youtube.com/watch?v=jlK5Wxh3qWI"
 
 class VideoChatterCog(discord.Cog):
     def __init__(self,
@@ -164,7 +164,7 @@ class VideoChatterCog(discord.Cog):
             color=0x95d790,
         )
 
-    def _initial_message_embed(self, message, initial_message):
+    def _initial_message_embed(self, message, initial_message,):
         thread_intro = f"""
                    Remember! The bot...                   
                    ...ignores messages starting with ~                                
@@ -175,14 +175,27 @@ class VideoChatterCog(discord.Cog):
                    Source code: 
                    https://github.com/jonmatthis/chatbot
                    This bot's prompt: 
-                   https://github.com/jonmatthis/chatbot/blob/main/chatbot/assistants/course_assistant/course_assistant_prompt.py
-                   
+                    https://github.com/jonmatthis/chatbot/blob/main/chatbot/bots/assistants/video_chatter/prompts/video_chatter_prompt.py                   
                    ------------------
                    ------------------
-                   Beginning chat with initial message: 
                    
-                   > {initial_message}
-                    
+                   Your job is to explain this video to the bot:
+                   
+                   {MEOWMALINE_YOUTUBE_LINK}
+                   
+                   Some possible things you could talk to it about:
+                   
+                   - What do you find interesting about this video in the context of this course?  
+                   
+                   - What behaviors and tasks are being performed? What are some of the underlying neural/biomechcanical mechanisms at play?
+                   
+                   - What kind of data was recorded? How is it being presented?
+                   
+                   - What are some scientific questions that could be asked about this data?
+                   
+                   - What are some ways that this data could be analyzed? What are some other tools that we could us to get more data from this behavior?
+                   
+                   - ...or anything else you find interesting! 
                    """
         return discord.Embed(
             description=thread_intro,

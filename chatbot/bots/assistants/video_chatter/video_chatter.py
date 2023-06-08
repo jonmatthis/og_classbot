@@ -17,7 +17,7 @@ from langchain.prompts import (
 
 class VideoChatter:
     def __init__(self,
-                 temperature=0,
+                 temperature=0.8,
                  model_name="gpt-4",
                  prompt: str = VIDEO_CHATTER_SYSTEM_TEMPLATE,
                  ):
@@ -71,7 +71,6 @@ class VideoChatter:
 
     async def demo(self):
         print("Welcome to the Neural Control Assistant demo!")
-        print("You can ask questions or provide input related to the course.")
         print("Type 'exit' to end the demo.\n")
 
         while True:
