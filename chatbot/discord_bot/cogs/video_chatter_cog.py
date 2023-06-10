@@ -5,7 +5,7 @@ from datetime import datetime
 import discord
 
 from chatbot.bots.assistants.video_chatter.video_chatter import VideoChatter
-from chatbot.discord_bot.cogs.chat_cog.chat_cog import Chat
+from chatbot.discord_bot.cogs.chat_cog.chat_model import Chat
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
 
 TIME_PASSED_MESSAGE = """

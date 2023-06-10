@@ -1,17 +1,15 @@
 import logging
 import os
-import uuid
 from datetime import datetime
-from typing import List, Union
 
 import discord
-from pydantic import BaseModel
 
 from chatbot.bots.assistants.course_assistant.course_assistant import CourseAssistant
 from chatbot.bots.assistants.course_assistant.prompts.general_course_assistant_prompt import \
     GENERAL_COURSE_ASSISTANT_SYSTEM_TEMPLATE
 from chatbot.bots.assistants.course_assistant.prompts.project_manager_prompt import PROJECT_MANAGER_TASK_PROMPT
-from chatbot.bots.assistants.video_chatter.video_chatter import VideoChatter
+from chatbot.discord_bot.cogs.chat_cog.chat_model import Chat
+from chatbot.discord_bot.cogs.video_chatter_cog import VIDEO_CHAT_CHANNEL_ID
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
 from chatbot.system.environment_variables import get_admin_users
 
@@ -22,19 +20,6 @@ TIME_PASSED_MESSAGE = """
 """
 
 logger = logging.getLogger(__name__)
-
-
-class Chat(BaseModel):
-    title: str
-    thread: discord.Thread
-    assistant: Union[CourseAssistant, VideoChatter]
-
-    started_at: str = datetime.now().isoformat()
-    chat_id: str = uuid.uuid4()
-    messages: List = []
-
-    class Config:
-        arbitrary_types_allowed = True
 
 
 class ChatCog(discord.Cog):
@@ -65,6 +50,9 @@ class ChatCog(discord.Cog):
 
         if not ctx.channel.id in self._allowed_channels:
             logger.info(f"Channel {ctx.channel.id} is not allowed to start a chat")
+            return
+
+        if ctx.channel.id == VIDEO_CHAT_CHANNEL_ID:
             return
 
         student_user_name = str(ctx.user)
@@ -119,6 +107,10 @@ class ChatCog(discord.Cog):
         # Make sure we won't be replying to ourselves.
         if message.author.id == self._discord_bot.user.id:
             return
+
+        if message.channel.parent_id == VIDEO_CHAT_CHANNEL_ID:
+            return
+
 
         # Only respond to messages in threads
         if not message.channel.__class__ == discord.Thread:
