@@ -34,10 +34,11 @@ class Quine:
         The source code is enclosed in ```python ``` code blocks.
     """
 
-    def __init__(self, base_directory: str, excluded_directories: List[str], included_extensions: List[str]):
+    def __init__(self, base_directory: str, excluded_directories: List[str], included_extensions: List[str], excluded_file_names: List[str]):
         self.base_directory = base_directory
         self.excluded_directories = excluded_directories
         self.included_extensions = included_extensions
+        self.excluded_file_names = excluded_file_names
 
     def write_to_file(self, root_directory: str, file_name: str, output_file: object) -> None:
         """
@@ -72,23 +73,29 @@ class Quine:
         output_dir.mkdir(parents=True, exist_ok=True)  # Create the output directory if it doesn't exist
         file_path = output_dir / file_name  # Output file path
         with open(file_path, "w") as output_file:
+
             for root_directory, directories, files in os.walk(self.base_directory):
                 directories[:] = [directory for directory in directories if directory not in self.excluded_directories]
                 if root_directory != ".":
                     output_file.write(f"# {os.path.relpath(root_directory, '..')}\n\n")
                 for file_name in files:
+                    if file_name in self.excluded_file_names:
+                        continue
                     if any(file_name.endswith(extension) for extension in self.included_extensions):
                         self.write_to_file(root_directory, file_name, output_file)
 
 
 if __name__ == "__main__":
 
-    base_directory_in = r"C:\Users\jonma\github_repos\jonmatthis\chatbot\chatbot\discord_bot"
+    base_directory_in = r"C:\Users\jonma\github_repos\freemocap_organization\skelly_viewer\skelly_viewer\matplotlib"
     quine = Quine(
         base_directory=base_directory_in,
         excluded_directories=["__pycache__",
                               ".git",
                               "output"
+                              "subplots"
                               ],
-        included_extensions=[".py"])
+        included_extensions=[".py", ".html", ".js", ".css", ".md", ".json", ".csv", ".txt"],
+        excluded_file_names=["__init__.py", "subplots"],
+    )
     quine.generate_quine()
