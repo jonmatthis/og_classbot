@@ -1,5 +1,7 @@
 import asyncio
+import os
 from datetime import datetime
+from pathlib import Path
 
 from langchain.callbacks import get_openai_callback
 
@@ -22,6 +24,8 @@ async def generate_video_chatter_summaries(mongo_database: MongoDatabaseManager,
     student_usernames = thread_collection.distinct("_student_username")
 
     number_of_students = len(student_usernames)
+    json_save_path =  Path(os.getenv("PATH_TO_COURSE_DROPBOX_FOLDER")) / "chatbot_data" / "video_chatter_summaries.json"
+    json_save_path.parent.mkdir(parents=True, exist_ok=True)
 
     with get_openai_callback() as cb:
         for student_iterator, student_username in enumerate(student_usernames):
@@ -117,8 +121,14 @@ async def generate_video_chatter_summaries(mongo_database: MongoDatabaseManager,
                                               data={"$push": {"previous_summaries": video_chatter_summary_entry[
                                                   "video_chatter_summary"]}}
                                               )
+            mongo_database.save_json(collection_name=video_chatter_summaries_collection_name,
+                                 save_path = json_save_path
+                                 )
 
-    mongo_database.save_json(collection_name=video_chatter_summaries_collection_name, )
+
+    mongo_database.save_json(collection_name=video_chatter_summaries_collection_name,
+                             save_path = json_save_path
+                             )
 
 
 if __name__ == '__main__':

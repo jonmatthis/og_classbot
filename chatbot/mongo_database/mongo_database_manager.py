@@ -60,6 +60,10 @@ class MongoDatabaseManager:
                                                                                                 timestamp=True)
         data = list(collection.find(query))
 
+        save_path = str(save_path)
+        if save_path[-5:] != ".json":
+            save_path += ".json"
+
         for document in data:
             document["_id"] = str(document["_id"])
 
