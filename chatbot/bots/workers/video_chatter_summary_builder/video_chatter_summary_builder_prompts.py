@@ -55,7 +55,7 @@ VIDEO_CHATTER_FIRST_HUMAN_INPUT_PROMPT = """
 
     On the basis of what you already know and the new conversation, update your the "Video Summary" by incorporating the new information you learned from the conversation.
 
-    In your repsonse, follow this schema: 
+    In your response, follow this schema: 
     
     ++++
          ## Video Description:

@@ -9,6 +9,7 @@ from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.chat_models import ChatOpenAI, ChatAnthropic
 from langchain.memory import ConversationBufferMemory
 from langchain.prompts import HumanMessagePromptTemplate, ChatPromptTemplate, SystemMessagePromptTemplate
+from langchain.schema import AIMessage, HumanMessage
 
 from chatbot.bots.workers.video_chatter_summary_builder.video_chatter_summary_builder_prompts import \
     VIDEO_CHATTER_NEW_SUMMARY_HUMAN_INPUT_PROMPT, VIDEO_CHATTER_BUILDER_PROMPT_SYSTEM_TEMPLATE, \
@@ -60,27 +61,29 @@ class VideoChatterSummaryBuilder:
         #     current_summary=current_summary
         # )
 
-        human_initial_message_prompt = HumanMessagePromptTemplate.from_template(
-            template = VIDEO_CHATTER_FIRST_HUMAN_INPUT_PROMPT,
-            input_variables = ["new_conversation_summary"]
-        )
+        human_initial_message = HumanMessage(content=VIDEO_CHATTER_FIRST_HUMAN_INPUT_PROMPT)
+
+        ai_response = AIMessage(
+            content="Ok, I'm ready to summarize the conversation. I will be sure to follow that schema")
+
         human_message_prompt = HumanMessagePromptTemplate.from_template(
-            template = VIDEO_CHATTER_NEW_SUMMARY_HUMAN_INPUT_PROMPT,
-            input_variables = ["new_conversation_summary"]
+            template=VIDEO_CHATTER_NEW_SUMMARY_HUMAN_INPUT_PROMPT,
+            input_variables=["new_conversation_summary"]
         )
         return ChatPromptTemplate.from_messages(
-            [system_message_prompt, human_message_prompt]
+            [system_message_prompt, human_initial_message, ai_response, human_message_prompt]
         )
 
     async def update_video_chatter_summary_based_on_new_conversation(self,
-                                                               current_video_chatter_summary: str,
-                                                               new_conversation_summary: str,
-                                                               ) -> str:
+                                                                     current_video_chatter_summary: str,
+                                                                     new_conversation_summary: str,
+                                                                     ) -> str:
 
         return await self._llm_chain.arun(
             current_summary=current_video_chatter_summary,
             new_conversation_summary=new_conversation_summary,
         )
+
 
 def time_since_last_summary(video_chatter_summary_entry):
     previous_summary_datetime = datetime.strptime(video_chatter_summary_entry["video_chatter_summary"]["created_at"],
@@ -96,4 +99,3 @@ def num_tokens_from_string(string: str, model: str) -> int:
     encoding = tiktoken.encoding_for_model(model)
     num_tokens = len(encoding.encode(string))
     return num_tokens
-
