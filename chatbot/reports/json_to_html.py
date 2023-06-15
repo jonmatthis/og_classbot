@@ -1,26 +1,26 @@
 import json
+import os
 import re
 from pathlib import Path
+
+import pandas as pd
+from dotenv import load_dotenv
+
+from chatbot.system.get_external_info import load_student_info
 
 
 class JsonToHTML:
     def __init__(self,
                  json_file_path: str,
-                 csv_file_path: str,
                  schema: dict,
                  output_file: str = "report.html"):
         self.json_file_path = json_file_path
-        self.csv_file_path = csv_file_path
         self.output_file = output_file
         self.schema = schema
         self.table_of_contents = []
-        self.names = self.read_csv_data()
-    def read_csv_data(self):
-        import csv
-        with open(self.csv_file_path, newline='', encoding='utf-8') as csvfile:
-            reader = csv.DictReader(csvfile)
-            names = {row['discord_username']: row['full_name'] for row in reader}
-        return names
+        self.student_info = load_student_info()
+
+
     def read_json_data(self):
         with open(self.json_file_path, "r", encoding="utf-8") as file:
             data = json.load(file)
@@ -42,8 +42,8 @@ class JsonToHTML:
 
                 html_tag = schema[key].get("html_tag", "p")
                 if html_tag == "h1":
-                    html += f"<{html_tag} id='{data['discord_username']}'>{key}</{html_tag}>"
-                    self.table_of_contents.append(data['discord_username'])
+                    html += f"<{html_tag} id='{data['_student_name']}'>{key}</{html_tag}>"
+                    self.table_of_contents.append(data['_student_name'])
 
                 if isinstance(value, dict) and html_tag != "value":
                     html += process_data(value, schema[key]["fields"], key)
@@ -56,7 +56,7 @@ class JsonToHTML:
                             html += process_data(item, schema[key]["fields"], key)
                 else:
                     if html_tag == "value" and parent_key:
-                        if parent_key == 'student_summary':
+                        if parent_key == 'video_chatter_summary':
                             value = self.format_summary(value)
                             html += f"{value}<br>"
                             continue
@@ -105,17 +105,19 @@ class JsonToHTML:
 
 
 if __name__ == "__main__":
-    json_file_path = r"D:\Dropbox\Northeastern\Courses\neural_control_of_real_world_human_movement\course_data\mongo_database_backup\chatbot_data\database_backup\humon-chatbot.student_summaries_complete_2023-06-06.json"
-    csv_file_path = r"D:\Dropbox\Northeastern\Courses\neural_control_of_real_world_human_movement\course_data\student_info\student_info_combined.csv"
-    output_file_path = str(Path(json_file_path).parent.parent.parent.parent / "student_report.html")
+    load_dotenv()
+    base_path = Path(os.getenv("PATH_TO_COURSE_DROPBOX_FOLDER"))
+    json_file_path = base_path / "course_data" / "chatbot_data"/ "video_chatter_summaries.json"
+    output_file_path = base_path /"course_data" / "video_chatter_summaries_report.html"
 
     schema = {
-        "discord_username": {"html_tag": "h1", "fields": {}},
-        "student_summary": {"html_tag": "h2", "fields": {"summary": {"html_tag": "value", "fields": {}}}}
+        "_student_name": {"html_tag": "h1", "fields": {}},
+        "video_chatter_summary": {"html_tag": "h2", "fields": {"summary": {"html_tag": "value", "fields": {}}}}
     }
 
-    converter = JsonToHTML(json_file_path=json_file_path,
-                           csv_file_path=csv_file_path,
+    converter = JsonToHTML(json_file_path=str(json_file_path),
                            schema=schema,
-                           output_file=output_file_path)
+                           output_file=str(output_file_path))
     converter.generate_report()
+
+    print("Done!")
