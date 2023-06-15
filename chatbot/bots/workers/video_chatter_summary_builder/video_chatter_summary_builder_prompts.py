@@ -16,7 +16,7 @@ VIDEO_CHATTER_BUILDER_PROMPT_SYSTEM_TEMPLATE = """
     - Acquire valuable skills in data analysis or background research.
     ----
      
-    The students watched a video and have tried to describe it to you.
+    This is a summary of a student (who's name is {student_name} and discord username is {student_discord_username}) describing a video they watched for this course. 
     
     Here is a summary of what you know about the video based on what they have shown you so far:
     
@@ -26,28 +26,32 @@ VIDEO_CHATTER_BUILDER_PROMPT_SYSTEM_TEMPLATE = """
     
     Remember to follow this schema: 
     +++
-     ## Video Description:
-        
-        [Describe the video in a few sentences]
-        
-        ### The main task
-         - [Describe the main task in two or three bullet points]
-
-        ### Subtasks (list up to 5-8 subtasks)
-         - [one subtask per bullet point]
-            - [Scientific field 1]  ([how does this field relate to the subtask])            
-        ## What kind of data is represented in the video?
-        - [list the types of data in the video]
-                
-        ## What are some of the most common observations the students have about this video?
-        - [list the most common observations the students have about this video, 5-8 max]
-        
-        ## What are some of the most common questions the students have about this video?
-        - [list the most common questions the students have about this video, 5-8 max]
-     ++++ 
+    {response_schema}
+    ++++ 
      
      BE BRIEF!
     """
+
+VIDEO_CHATTER_RESPONSE_SCHEMA = """
+
+# Student Name: [name of the student who was talking]
+# Student Username: [discord username of the student who was talking]
+# Video Description: 
+
+[Describe this conversation in a few sentences and list specific quotes from the student (DO NOT MAKE THESE UP, ONLY COPY THE STUDENTS WORDS)
+
+# The main task
+ - [Describe the main task in two or three bullet points]
+
+# Subtasks (list up to 5-8 subtasks)
+ - [one subtask per bullet point]
+    - [Scientific field 1]  ([how does this field relate to the subtask])            
+# What kind of data is represented in the video?
+- [list the types of data in the video]
+        
+# Which part of the video was the most interesting for the student? 
+ - [Describe what the student seemed to find the most intersting about the video, Include direct quotes from the student to back up your claim (DO NOT MAKE THESE UP, ONLY COPY THE STUDENTS WORDS)]
+"""
 
 VIDEO_CHATTER_FIRST_HUMAN_INPUT_PROMPT = """
     
@@ -55,66 +59,43 @@ VIDEO_CHATTER_FIRST_HUMAN_INPUT_PROMPT = """
 
     On the basis of what you already know and the new conversation, update your the "Video Summary" by incorporating the new information you learned from the conversation.
 
-    In your response, follow this schema: 
-    
-    ++++
-         ## Video Description:
-        
-        [Describe the video in a few sentences]
-        
-        ### The main task
-         - [Describe the main task in two or three bullet points]
 
-        ### Subtasks (list up to 5-8 subtasks)
-         - [one subtask per bullet point]
-            - [Scientific field 1]  ([how does this field relate to the subtask])            
-        
-        
-        
-        ## What kind of data is represented in the video?
-        - [list the types of data in the video]
-                
-        ## What are some of the most common observations the students have about this video?
-        - [list the most common observations the students have about this video, 5-8 max]
-        
-        ## What are some of the most common questions the students have about this video?
-        - [list the most common questions the students have about this video, 5-8 max]
-    +++
-    Here is an EXAMPLE of a nice description from a DIFFERENT video:
+    Here is an EXAMPLE of a nice description from a DIFFERENT video following the perscribed schema
     
     EXAMPLE:
-    ----
-        ## Video Description:
-        
-        This video shows a first person view of a person making a peanut butter and jelly sandwich. They are sitting in a lab setting with computers around them and there is data drawn on teh screen that shows where the subject is looking
-        
-        ### The main task
-         - Making a peanut butter and jelly sandwich
+    +++
+    # Student Name: Jon Matthis
+    # Student Username: Jon#8343
+    
+    # Video Description:
+    According to Jon#8343, this video shows a first person view of a person making a peanut butter and jelly sandwich. They are sitting in a lab setting with computers around them and there is data drawn on teh screen that shows where the subject is looking
+    
+    ### The main task
+     - Making a peanut butter and jelly sandwich
 
-        ### Subtasks
-         - Grab the knife
-            - Visual neuroscience  (identify the knife)
-            - Perceptuomotor control (grasp the knife)
-            - Musculoskeletal biomechanics (lift the knife)
+    ### Subtasks
+     - Grab the knife
+        - Visual neuroscience  (identify the knife)
+        - Perceptuomotor control (grasp the knife)
+        - Musculoskeletal biomechanics (lift the knife)
+        
+     - Check the clock
+        - Visual neuroscience  (identify the clock)
+        - Cognitive neuroscience (read the clock)
+    
+    ## What kind of data is represented in the video?
+    - eye tracking
+    - video
+    - computer vision
             
-         - Check the clock
-            - Visual neuroscience  (identify the clock)
-            - Cognitive neuroscience (read the clock)
-        
-        ## What kind of data is represented in the video?
-        - eye tracking
-        - video
-        - computer vision
-                
-        ## What are some of the most common observations the students have about this video?
-        - Students were interested in eye tracking technology
-        - Students were surprised how much people move their eyes
-        
-        ## What are some of the most common questions the students have about this video?
-        - How does eye tracking work?
-        - How do we know where to point our eyes?
-        - How do we use visual information to move our body?
-    ---
+    ## What are some of the most common observations the students have about this video?
+    
+    The student was interested in the eye tracking technology and the video analysis.
+     
+    Here's are some quote from them:
+    Jon#8343: "The eye tracker is really cool!"
+    Jon#8343: "I was surprised the eyes moved so much"        
+    ++++
     
     Please follow a similar format when you write your summary of the NEW video. DO NOT COPY THE EXAMPLE, ONLY USE IT AS A GUIDE.
     
@@ -127,8 +108,9 @@ VIDEO_CHATTER_NEW_SUMMARY_HUMAN_INPUT_PROMPT = """
     On the basis of what you already know and the new conversation, update your the "Video Summary" by incorporating the new information you learned from the conversation.
     
     New Conversation Summary: 
+    
     {new_conversation_summary}
 
-    BE BRIEF!
+    BE BRIEF! DON'T MAKE THINGS UP! IF YOU DON'T KNOW, SAY "(I DON'T HAVE ENOUGH INFORMATION TO ANSWER THIS QUESTION)"
     
 """

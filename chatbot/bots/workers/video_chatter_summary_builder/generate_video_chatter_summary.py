@@ -24,11 +24,13 @@ async def generate_video_chatter_summaries(mongo_database: MongoDatabaseManager,
     student_usernames = thread_collection.distinct("_student_username")
 
     number_of_students = len(student_usernames)
-    json_save_path =  Path(os.getenv("PATH_TO_COURSE_DROPBOX_FOLDER")) / "chatbot_data" / "video_chatter_summaries.json"
+    json_save_path =  Path(os.getenv("PATH_TO_COURSE_DROPBOX_FOLDER")) / "course_data" / "chatbot_data" / "video_chatter_summaries.json"
     json_save_path.parent.mkdir(parents=True, exist_ok=True)
 
     with get_openai_callback() as cb:
         for student_iterator, student_username in enumerate(student_usernames):
+
+
 
             student_threads_in_designated_channel = [thread for thread in
                                                      thread_collection.find({'_student_username': student_username,
@@ -50,19 +52,23 @@ async def generate_video_chatter_summaries(mongo_database: MongoDatabaseManager,
 
                 student_discord_username = thread_entry["_student_username"]
                 student_name = thread_entry["_student_name"]
+                student_discord_id = thread_entry["discord_user_id"]
+                thread_channel_name = thread_entry["channel"]
+                server_name = thread_entry["server_name"]
 
-                mongo_query = {
+                student_mongo_query = {
                     "_student_name": student_name,
                     "_student_username": student_discord_username,
-                    "server_name": thread_entry["server_name"],
-                    "discord_user_id": thread_entry["discord_user_id"],
-                    "thread_title": thread_entry["thread_title"],
-                    "created_at": thread_entry["created_at"],
-                    "channel": thread_entry["channel"],
+                    "_student_discord_id": student_discord_id,
+                    "channel": thread_channel_name,
+                    "server_name": server_name,
                 }
+
                 mongo_database.upsert(collection=video_chatter_summaries_collection_name,
-                                      query=mongo_query,
-                                      data={"$set": {"threads": student_threads_in_designated_channel}})
+                                      query=student_mongo_query,
+                                      data={"$set": {"threads": student_threads_in_designated_channel,
+                                                     "thread_creation_time": thread_entry["created_at"],
+                                                     }})
 
                 try:
                     video_chatter_summary_entry = video_chatter_summaries_collection.find_one(
@@ -70,7 +76,7 @@ async def generate_video_chatter_summaries(mongo_database: MongoDatabaseManager,
                     current_video_chatter_summary = video_chatter_summary_entry.get("video_chatter_summary", "")
                     first_entry = False
                     if "video_chatter_summary" in video_chatter_summary_entry:
-                        current_summary_created_at = video_chatter_summary_entry["video_chatter_summary"]["created_at"]
+                        current_summary_created_at = video_chatter_summary_entry["video_chatter_summary"]["summary_creation_time"]
                         current_video_chatter_summary_created_at_datetime = datetime.strptime(
                             current_summary_created_at, '%Y-%m-%dT%H:%M:%S.%f')
                     else:
@@ -81,6 +87,8 @@ async def generate_video_chatter_summaries(mongo_database: MongoDatabaseManager,
                     raise e
 
                 video_chatter_summary_builder = VideoChatterSummaryBuilder(
+                    student_name=student_name,
+                    student_discord_username=student_discord_username,
                     current_summary=current_video_chatter_summary, )
 
                 thread_summary = thread_entry['summary']['summary']
@@ -109,15 +117,15 @@ async def generate_video_chatter_summaries(mongo_database: MongoDatabaseManager,
                 print(f"OpenAI API callback:\n {cb}\n")
 
                 mongo_database.upsert(collection=video_chatter_summaries_collection_name,
-                                      query={"discord_username": student_username},
+                                      query=student_mongo_query,
                                       data={"$set": {"video_chatter_summary": {"summary": updated_video_chatter_summary,
-                                                                               "created_at": datetime.now().isoformat(),
+                                                                               "summary_creation_time": datetime.now().isoformat(),
                                                                                "model": video_chatter_summary_builder.llm_model}}},
                                       )
                 if video_chatter_summary_entry is not None:
                     if "video_chatter_summary" in video_chatter_summary_entry:
                         mongo_database.upsert(collection=video_chatter_summaries_collection_name,
-                                              query={"discord_username": student_username},
+                                              query={"_student_username": student_username},
                                               data={"$push": {"previous_summaries": video_chatter_summary_entry[
                                                   "video_chatter_summary"]}}
                                               )

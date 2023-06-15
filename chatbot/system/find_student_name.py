@@ -1,8 +1,11 @@
-def find_student_name(self, thread_owner_username):
+from chatbot.system.get_external_info import load_student_info
+
+
+def find_student_name( thread_owner_username):
     student_name = None
     student_discord_username = None
-
-    for student_key, student_dict in self.student_info.items():
+    student_info = load_student_info()
+    for student_key, student_dict in student_info.items():
         if student_dict['discord_username'].split('#')[0].lower() == thread_owner_username.split('#')[0].lower():
             student_name = student_key
             student_discord_username = student_dict['discord_username']
