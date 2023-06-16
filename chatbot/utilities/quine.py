@@ -87,15 +87,14 @@ class Quine:
 
 if __name__ == "__main__":
 
-    base_directory_in = r"C:\Users\jonma\github_repos\jonmatthis\analysis\analysis"
+    base_directory_in = r"C:\Users\jonma\github_repos\jonmatthis\chatbot\chatbot\bots\workers\video_chatter_summary_builder"
     quine = Quine(
         base_directory=base_directory_in,
         excluded_directories=["__pycache__",
                               ".git",
-                              "output"
-                              "subplots"
+
                               ],
         included_extensions=[".py", ".html", ".js", ".css", ".md", ".json", ".csv", ".txt"],
-        excluded_file_names=["__init__.py", "subplots"],
+        excluded_file_names=["__init__.py", "video_chatter_summary_builder_prompts.py" ],
     )
     quine.generate_quine()

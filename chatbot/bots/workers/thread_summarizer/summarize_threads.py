@@ -44,7 +44,7 @@ async def summarize_threads(server_name: str,
         total_cost += thread_cost
 
         mongo_database.upsert(
-            collection=get_thread_backups_collection_name(server_name=server_name),
+            collection_name=get_thread_backups_collection_name(server_name=server_name),
             query={"_id": thread_entry["_id"]},
             data={
                 "$set": {

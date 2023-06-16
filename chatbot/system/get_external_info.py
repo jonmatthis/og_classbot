@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 def load_student_info():
     load_dotenv()
     student_info = {}
-    with open(os.getenv('PATH_TO_STUDENT_INFO_CSV').replace('\\', '/').replace('\\', '/'), 'r') as f:
+    with open(os.getenv('PATH_TO_STUDENT_INFO_CSV'), 'r') as f:
         reader = csv.reader(f)
         header = next(reader)
         for row in reader:

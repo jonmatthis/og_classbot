@@ -42,13 +42,12 @@ class JsonToHTML:
 
                 html_tag = schema[key].get("html_tag", "p")
                 if html_tag == "h1":
-                    html += f"<{html_tag} id='{data['_student_name']}'>{key}</{html_tag}>"
+                    html += f"<{html_tag} id='{data['_student_name']}'></{html_tag}>"
                     self.table_of_contents.append(data['_student_name'])
 
                 if isinstance(value, dict) and html_tag != "value":
                     html += process_data(value, schema[key]["fields"], key)
                 elif isinstance(value, list):
-                    # html += f"<{html_tag}>{key}</{html_tag}>"
                     for item in value:
                         if isinstance(item, str):
                             html += f"<li>{item}</li>"
@@ -71,10 +70,10 @@ class JsonToHTML:
         return html
 
     def write_to_html_file(self, html_content: str):
-        toc_html = "<h2>Table of Contents</h2>\n<ol>\n"
+        toc_html = "<div class='toc'><h2>Table of Contents</h2>\n<ul>\n"
         for student_name in self.table_of_contents:
             toc_html += f"<li><a href='#{student_name}'>{student_name}</a></li>\n"
-        toc_html += "</ol>\n"
+        toc_html += "</ul>\n</div>"
 
         html = f"""
         <!doctype html>
@@ -88,10 +87,12 @@ class JsonToHTML:
           <body>
             <div class="container mt-4">
                 {toc_html}
-                {html_content}
+                <div class="content">
+                  {html_content}
+                </div>
             </div>
             <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
-            <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.bundle.min.js"></script>
+            <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
           </body>
         </html>
         """
@@ -112,7 +113,8 @@ if __name__ == "__main__":
 
     schema = {
         "_student_name": {"html_tag": "h1", "fields": {}},
-        "video_chatter_summary": {"html_tag": "h2", "fields": {"summary": {"html_tag": "value", "fields": {}}}}
+        "video_chatter_summary": {"html_tag": "h2", "fields": {"summary": {"html_tag": "value", "fields": {}}}},
+        "thread_conversation": {"html_tag": "h2", "fields": {"summary": {"html_tag": "value", "fields": {}}}}
     }
 
     converter = JsonToHTML(json_file_path=str(json_file_path),
@@ -121,3 +123,4 @@ if __name__ == "__main__":
     converter.generate_report()
 
     print("Done!")
+

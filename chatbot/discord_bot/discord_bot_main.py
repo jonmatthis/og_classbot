@@ -49,7 +49,7 @@ class DiscordBot(discord.Bot):
             collection_name = f"server_{message.guild.name}_messages"
 
         self.mongo_database.upsert(
-            collection=collection_name,
+            collection_name=collection_name,
             query={"server_name": server_name},
             data={"$push": {"messages": {
                 'author': str(message.author),

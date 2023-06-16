@@ -46,8 +46,8 @@ class MongoDatabaseManager:
     def insert(self, collection: str, document: dict):
         return self._database[collection].insert_one(document)
 
-    def upsert(self, collection: str, query: dict, data: dict):
-        return self._database[collection].update_one(query, data, upsert=True)
+    def upsert(self, collection_name: str, query: dict, data: dict):
+        return self._database[collection_name].update_one(query, data, upsert=True)
 
     def find(self, collection_name: str, query: dict = None):
         query = query if query is not None else {}

@@ -66,7 +66,7 @@ async def generate_class_summary(mongo_database: MongoDatabaseManager,
             print(f"Updated summary (after update):\n{updated_class_summary}\n\n---\n\n")
             current_class_summary = deepcopy(updated_class_summary)
 
-            mongo_database.upsert(collection=class_summary_collection_name,
+            mongo_database.upsert(collection_name=class_summary_collection_name,
                                   query={"summary_id": class_summary_id},
                                   data={"$set": {"summary": updated_class_summary,
                                                  "created_at": datetime.now().isoformat(),

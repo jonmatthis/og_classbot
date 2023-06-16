@@ -99,7 +99,7 @@ class ThreadScraperCog(commands.Cog):
                         }
 
                         self.mongo_database_manager.upsert(
-                            collection=get_thread_backups_collection_name(server_name=message.guild.name),
+                            collection_name=get_thread_backups_collection_name(server_name=message.guild.name),
                             query=mongo_query,
                             data={"$addToSet": {"messages": datebase_update_query},
                                   "$set": {

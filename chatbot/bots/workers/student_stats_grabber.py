@@ -1,44 +1,71 @@
 import asyncio
 from datetime import datetime
 
-from langchain.callbacks import get_openai_callback
+import pandas as pd
+from pydantic import BaseModel
 
-from chatbot.bots.workers.student_summary_builder.student_summary_builder import StudentSummaryBuilder
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
-from chatbot.system.filenames_and_paths import get_thread_backups_collection_name, STUDENT_SUMMARIES_COLLECTION_NAME
+from chatbot.system.filenames_and_paths import get_thread_backups_collection_name, STUDENT_STATISTICS_COLLECTION_NAME
 from chatbot.system.get_external_info import load_student_info
 
 
+class StudentStatistics(BaseModel):
+    number_of_threads: int = 0
+    number_of_messages: int = 0
+    total_word_count: int = 0
+    threads_in_introductions: int = 0
+    threads_in_literature_review: int = 0
+    threads_in_video_chatter_bot: int = 0
+    threads_in_bot_playground: int = 0
+    total_character_count: int = 0
+    student_character_count: int = 0
+    total_student_word_count: int = 0
+
+
 def calculate_student_statistics(student_threads):
-    statistics = {"num_threads": 0, "num_messages": 0, "total_word_count": 0}
-    statistics["num_threads"] = len(student_threads)
+    statistics = StudentStatistics()
+    statistics.number_of_threads = len(student_threads)
 
     for thread in student_threads:
-        statistics["num_messages"] += len(thread["messages"])
+        statistics = _increment_channel_thread_count(statistics, thread["channel"])
+
+        statistics.number_of_messages += thread["total_message_count"]
+        statistics.total_character_count += thread["total_character_count_for_this_thread"]
+        statistics.student_character_count += thread["student_character_count_for_this_thread"]
         for message in thread["messages"]:
-            statistics["total_word_count"] += len(message["message"].split())
+            if message["author"] == thread["_student_username"]:
+                statistics.total_student_word_count += len(message["content"].split())
+
+    return statistics
+
+
+def _increment_channel_thread_count(statistics: StudentStatistics, channel_name: str):
+    if channel_name == "introductions":
+        statistics.threads_in_introductions += 1
+    elif channel_name == "literature-review":
+        statistics.threads_in_literature_review += 1
+    elif channel_name == "video-chatter-bot":
+        statistics.threads_in_video_chatter_bot += 1
+    elif channel_name == "bot-playground":
+        statistics.threads_in_bot_playground += 1
+    else:
+        raise Exception(f"Unknown channel: {channel_name}")
 
     return statistics
 
 
 async def grab_student_statistics(mongo_database: MongoDatabaseManager,
                                   thread_collection_name: str,
-                                  student_summaries_collection_name: str,
-                                  student_statistics_collection_name: str,
-                                  overwrite: bool = False,
                                   ):
     thread_collection = mongo_database.get_collection(thread_collection_name)
-    student_summaries_collection = mongo_database.get_collection(student_summaries_collection_name)
-    student_statistics_collection = mongo_database.get_collection(student_statistics_collection_name)
-
-    student_usernames = thread_collection.distinct("thread_owner_name")
-
-    number_of_students = len(student_usernames)
 
     student_info = load_student_info()
+    number_of_students = len(student_info)
 
-    student_names  = list(student_info.keys())
+    student_names = list(student_info.keys())
 
+    stats_calculated_on = datetime.now().isoformat()
+    all_student_statistics = {}
     for student_number, student_name in enumerate(student_names):
         student_username = student_info[student_name]["discord_username"]
         print(f"-----------------------------------------------------------------------------\n"
@@ -47,83 +74,29 @@ async def grab_student_statistics(mongo_database: MongoDatabaseManager,
               f"-----------------------------------------------------------------------------\n")
 
         student_threads = [thread for thread in
-                           thread_collection.find({'thread_owner_name': student_username})]
+                           thread_collection.find({'_student_name': student_name})]
 
-        student_statistics = calculate_student_statistics(student_threads)
+        one_student_statistics = calculate_student_statistics(student_threads)
+        student_dict = one_student_statistics.dict(exclude={"_id", "stats_calculation_time"})
+        student_dict["discord_username"] = student_info[student_name]["discord_username"]
+        all_student_statistics[student_name] = student_dict
 
-        mongo_database.upsert(collection=student_statistics_collection,
-                              query={"discord_username": student_username},
-                              data={"$set": {"threads": student_threads,
-                                             "statistics": student_statistics}})
 
-        try:
-            student_summary_entry = student_summaries_collection.find_one(
-                {"discord_username": student_username})
-            current_student_summary = student_summary_entry.get("student_summary", "")
-            if not current_student_summary == "":
-                current_student_summary = current_student_summary.get("summary", "")
-                current_summary_created_at = student_summary_entry["student_summary"]["created_at"]
-                current_student_summary_created_at_datetime = datetime.strptime(current_summary_created_at,
-                                                                                '%Y-%m-%dT%H:%M:%S.%f')
+        if all_student_statistics[student_name]["total_student_word_count"] == 0:
+            print(f"WARNING: {student_name} has no student messages")
+        mongo_database.upsert(collection_name=STUDENT_STATISTICS_COLLECTION_NAME,
+                              query={"stats_calculation_time": stats_calculated_on},
+                              data={"$set": {student_name: one_student_statistics.dict()}})
 
-        except Exception as e:
-            print(f"Error: {e}")
-            current_student_summary = "You have not seen this student before..."
+    mongo_database.save_json(collection_name=STUDENT_STATISTICS_COLLECTION_NAME, )
 
-        student_summary_builder = StudentSummaryBuilder(current_summary=current_student_summary, )
-
-        for thread_number, thread in enumerate(student_threads):
-            thread_summary = thread['summary']['summary']
-            thread_summary_created_at = thread['summary']['created_at']
-            thread_summary_created_at_datetime = datetime.strptime(thread_summary_created_at,
-                                                                   '%Y-%m-%dT%H:%M:%S.%f')
-
-            if not overwrite:
-                timedelta = thread_summary_created_at_datetime - current_student_summary_created_at_datetime
-                if timedelta.total_seconds() < 0:
-                    print(
-                        "Skipping thread because it is older than the current summary (i.e. it has already been incorporated into the summary)")
-                    continue
-
-            print(f"---------Incorporating Thread#{thread_number + 1}-of-{len(student_threads)}-------------\n")
-            print(f"Updating student summary based on thread with summary:\n {thread_summary}\n")
-
-            print(f"Current student summary (before update):\n{current_student_summary}\n")
-
-            updated_student_summary = await student_summary_builder.update_student_summary_based_on_new_conversation(
-                current_student_summary=current_student_summary,
-                new_conversation_summary=thread_summary, )
-
-            print(f"Updated summary (after update):\n{updated_student_summary}\n\n---\n\n")
-            print(f"OpenAI API callback:\n {cb}\n")
-
-            mongo_database.upsert(collection=student_summaries_collection_name,
-                                  query={"discord_username": student_username},
-                                  data={"$set": {"student_summary": {"summary": updated_student_summary,
-                                                                     "created_at": datetime.now().isoformat(),
-                                                                     "model": student_summary_builder.llm_model}}},
-                                  )
-            if student_summary_entry is not None:
-                if "student_summary" in student_summary_entry:
-                    mongo_database.upsert(collection=student_summaries_collection_name,
-                                          query={"discord_username": student_username},
-                                          data={"$push": {"previous_summaries": student_summary_entry[
-                                              "student_summary"]}}
-                                          )
-
-    mongo_database.save_json(collection_name=student_summaries_collection_name, )
+    df = pd.DataFrame.from_dict(all_student_statistics).T
+    df.to_csv("student_stats.csv")
 
 
 if __name__ == '__main__':
     server_name = "Neural Control of Real World Human Movement 2023 Summer1"
     thread_collection_name = get_thread_backups_collection_name(server_name=server_name)
-    for attempt in range(10):
-        try:
-            asyncio.run(grab_student_statistics(mongo_database=MongoDatabaseManager(),
-                                                thread_collection_name=thread_collection_name,
-                                                student_summaries_collection_name=STUDENT_SUMMARIES_COLLECTION_NAME,
-                                                student_statistics_collection_name="student_statistics",
-                                                ))
-        except Exception as e:
-            print(f"Error: {e}")
-            continue
+    asyncio.run(grab_student_statistics(mongo_database=MongoDatabaseManager(),
+                                        thread_collection_name=thread_collection_name,
+                                        ))
