@@ -1,28 +1,40 @@
 import logging
 from datetime import datetime
 
-from chatbot.bots.workers.thread_summarizer.thread_summarizer import logger, ThreadSummarizer
 from chatbot.bots.workers.thread_summarizer.split_thread_data_into_chunks import split_thread_data_into_chunks
+from chatbot.bots.workers.thread_summarizer.thread_summarizer import logger, ThreadSummarizer
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
+from chatbot.student_info.load_student_info import load_student_info
 from chatbot.system.filenames_and_paths import get_thread_backups_collection_name
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-async def summarize_threads(server_name: str,
-                            collection_name: str = None,
-                            overwrite: bool = False,
-                            save_to_json: bool = True):
-    mongo_database = MongoDatabaseManager()
-    if collection_name is None:
-        collection_name = get_thread_backups_collection_name(server_name=server_name)
 
-    thread_collection = mongo_database.get_collection(collection_name)
+
+async def summarize_threads(server_name: str,
+                            all_thread_collection_name: str = None,
+                            overwrite: bool = False,
+                            save_to_json: bool = True,
+                            channel_name: str = None,):
+    mongo_database = MongoDatabaseManager()
+    if all_thread_collection_name is None:
+        all_thread_collection_name = get_thread_backups_collection_name(server_name=server_name)
+    all_thread_collection = mongo_database.get_collection(all_thread_collection_name)
+
+    student_info = load_student_info()
+
     logger.info("Generating thread summary")
     total_cost = 0
-    for thread_entry in thread_collection.find():
+    for thread_entry in all_thread_collection.find():
+
+        if channel_name is not None and thread_entry["channel"] != channel_name:
+            logger.info(f"Skipping thread: `{thread_entry['thread_title']}` created at {str(thread_entry['created_at'])} because it is not in channel: {channel_name}")
+            continue
+
 
         if "summary" in thread_entry and not overwrite:
-            logger.info(f"Thread summary already exists, skipping thread: `{thread_entry['thread_title']}` created at {str(thread_entry['created_at'])}")
+            logger.info(
+                f"Thread summary already exists, skipping thread: `{thread_entry['thread_title']}` created at {str(thread_entry['created_at'])}")
             continue
 
         logger.info(f"Summarizing: `{thread_entry['thread_title']}` created at {str(thread_entry['created_at'])}")
@@ -63,14 +75,15 @@ async def summarize_threads(server_name: str,
               f"Total cost (so far): ${total_cost:.5f}\n"
               f"----------------------------\n")
 
-
-
     print(f"Done summarizing threads!\n\n Total estimated cost (final): ${total_cost:.2f}\n\n")
     if save_to_json:
-        mongo_database.save_json(collection_name=collection_name)
+        mongo_database.save_json(collection_name=all_thread_collection_name)
+
+
 if __name__ == "__main__":
     import asyncio
 
     asyncio.run(summarize_threads(server_name="Neural Control of Real World Human Movement 2023 Summer1",
-                                  overwrite=False,
-                                  save_to_json=True))
+                                  overwrite=True,
+                                  save_to_json=True,
+                                  channel_name="video-chatter-bot"))

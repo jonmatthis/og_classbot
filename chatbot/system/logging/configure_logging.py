@@ -1,3 +1,4 @@
+import io
 import logging
 import logging.handlers
 import sys
@@ -28,18 +29,19 @@ def get_logging_handlers(entry_point:str=None):
 
 
 def build_file_handler():
-    file_handler = logging.FileHandler(get_log_file_path())
+    file_handler = logging.FileHandler(get_log_file_path(), encoding="utf-8")
     file_handler.setFormatter(default_logging_formatter)
     file_handler.setLevel(logging.DEBUG)
     return file_handler
 
 
+
 def build_console_handler():
-    console_handler = logging.StreamHandler(sys.stdout)
+    stream = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    console_handler = logging.StreamHandler(stream)
     console_handler.setLevel(logging.DEBUG)
     console_handler.setFormatter(default_logging_formatter)
     return console_handler
-
 
 def configure_logging(entry_point:str=None):
     print(f"Setting up logging  {__file__}")

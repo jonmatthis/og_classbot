@@ -38,8 +38,8 @@ class MongoDatabaseManager:
 
         self._database = self._client.get_default_database(get_mongo_database_name())
 
-    def get_collection(self, collection_name: str):
-        if collection_name not in self._database.list_collection_names():
+    def get_collection(self, collection_name: str, create_if_not_exists: bool = True):
+        if collection_name not in self._database.list_collection_names() and create_if_not_exists:
             self._database.create_collection(collection_name)
         return self._database[collection_name]
 

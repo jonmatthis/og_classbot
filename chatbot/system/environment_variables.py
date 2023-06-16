@@ -26,3 +26,9 @@ def get_mongo_database_name():
 
 def get_mongo_chat_history_collection_name():
     return os.getenv('MONGODB_CHAT_HISTORY_COLLECTION_NAME')
+
+
+def is_course_server(server_id: int) -> bool:
+    if server_id == int(os.getenv("COURSE_SERVER_ID")):
+        return True
+    return False

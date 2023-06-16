@@ -3,10 +3,9 @@ import os
 import re
 from pathlib import Path
 
-import pandas as pd
 from dotenv import load_dotenv
 
-from chatbot.system.get_external_info import load_student_info
+from chatbot.student_info.load_student_info import load_student_info
 
 
 class JsonToHTML:

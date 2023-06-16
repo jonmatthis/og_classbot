@@ -15,7 +15,6 @@ VIDEO_CHATTER_SUMMARIES_COLLECTION_NAME = "video_chatter_summaries"
 CLASS_SUMMARY_COLLECTION_NAME = "class_summary"
 
 
-
 def os_independent_home_dir():
     return str(Path.home())
 
@@ -58,6 +57,11 @@ def get_default_database_json_save_path(filename: str, timestamp: bool = False):
     return str(save_path)
 
 
-def get_thread_backups_collection_name(server_name: str):
+def get_thread_backups_collection_name(server_name: str, channel_name: str = None):
+    server_name = server_name.replace(" ", "_")
 
-    return f"thread_backups_for_{server_name.replace(' ', '_')  }"
+    if channel_name is not None:
+        channel_name = channel_name.replace(" ", "_")
+        return f"{channel_name}_threads"
+
+    return f"thread_backups_for_{server_name}"

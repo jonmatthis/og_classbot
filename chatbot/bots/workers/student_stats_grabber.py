@@ -1,12 +1,14 @@
 import asyncio
+import os
 from datetime import datetime
+from pathlib import Path
 
 import pandas as pd
 from pydantic import BaseModel
 
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
 from chatbot.system.filenames_and_paths import get_thread_backups_collection_name, STUDENT_STATISTICS_COLLECTION_NAME
-from chatbot.system.get_external_info import load_student_info
+from chatbot.student_info.load_student_info import load_student_info
 
 
 class StudentStatistics(BaseModel):
@@ -91,7 +93,7 @@ async def grab_student_statistics(mongo_database: MongoDatabaseManager,
     mongo_database.save_json(collection_name=STUDENT_STATISTICS_COLLECTION_NAME, )
 
     df = pd.DataFrame.from_dict(all_student_statistics).T
-    df.to_csv("student_stats.csv")
+    df.to_csv(str(Path(os.getenv("PATH_TO_COURSE_DROPBOX_FOLDER")) / f"student_stats_{datetime.now().isoformat()}.csv"))
 
 
 if __name__ == '__main__':
