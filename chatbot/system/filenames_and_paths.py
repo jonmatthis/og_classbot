@@ -42,11 +42,13 @@ def create_log_file_name():
 def get_current_date_time_string():
     return datetime.now().isoformat().replace(":", "_").replace(".", "_")
 
-
-def get_default_database_json_save_path(filename: str, timestamp: bool = False):
-    if not filename.endswith(".json"):
+def clean_path_string(filename: str):
+    return filename.replace(":", "_").replace(".", "_").replace(" ", "_")
+def get_default_database_json_save_path(filename: str,
+                                        timestamp: bool = False):
+    if filename.endswith(".json"):
         filename.replace(".json", "")
-    filename = filename.replace(":", "_").replace(".", "_").replace(" ", "_")
+    filename = clean_path_string(filename)
     if timestamp:
         filename += f"_{get_current_date_time_string()}"
 

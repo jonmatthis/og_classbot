@@ -9,6 +9,9 @@ from langchain.chat_models import ChatOpenAI, ChatAnthropic
 from langchain.memory import ConversationBufferMemory
 from langchain.prompts import HumanMessagePromptTemplate, ChatPromptTemplate, SystemMessagePromptTemplate
 
+from chatbot.bots.workers.video_chatter_summary_builder.video_chatter_summary_builder_prompts import \
+    VIDEO_CHATTER_SUMMARY_RESPONSE_SCHEMA, VIDEO_CHATTER_META_SUMMARY_RESPONSE_SCHEMA
+
 GENERIC_META_SUMMARY_PROMPT = """
 I'm going to feed you one summary at a time and I want you to keep a running 'meta-summary' 
 that captures the overall structure of the entries. 
@@ -16,6 +19,11 @@ that captures the overall structure of the entries.
 Here is your current meta summary:
  
 {current_meta_summary}
+
+Your response should follow this schema:
+
+{response_schema}
+
 """
 
 load_dotenv()
@@ -25,7 +33,8 @@ logger = logging.getLogger(__name__)
 DATE_FORMAT = '%Y-%m-%dT%H:%M:%S.%f'
 
 META_SUMMARY_PROMPTS = {
-    "generic": GENERIC_META_SUMMARY_PROMPT}
+    "generic": GENERIC_META_SUMMARY_PROMPT,
+}
 
 
 class SummarySummarizer:
@@ -61,7 +70,8 @@ class SummarySummarizer:
     def _create_chat_prompt(self):
         system_message_prompt = SystemMessagePromptTemplate.from_template(
             template=META_SUMMARY_PROMPTS[self.summary_type],
-            input_variables=["current_meta_summary"])
+            input_variables=["current_meta_summary", "response_schema"])
+
 
         human_message_prompt = HumanMessagePromptTemplate.from_template(
             template="Here's a new summary: {new_summary} update your current meta summary accordingly ",
@@ -77,6 +87,7 @@ class SummarySummarizer:
                                                        ) -> str:
         return await self._llm_chain.arun(
             current_meta_summary=current_meta_summary,
+            response_schema=VIDEO_CHATTER_META_SUMMARY_RESPONSE_SCHEMA,
             new_summary=new_summary,
         )
 

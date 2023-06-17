@@ -13,7 +13,7 @@ from langchain.schema import AIMessage, HumanMessage
 
 from chatbot.bots.workers.video_chatter_summary_builder.video_chatter_summary_builder_prompts import \
     VIDEO_CHATTER_NEW_SUMMARY_HUMAN_INPUT_PROMPT, VIDEO_CHATTER_BUILDER_PROMPT_SYSTEM_TEMPLATE, \
-    VIDEO_CHATTER_FIRST_HUMAN_INPUT_PROMPT, VIDEO_CHATTER_RESPONSE_SCHEMA
+    VIDEO_CHATTER_FIRST_HUMAN_INPUT_PROMPT, VIDEO_CHATTER_SUMMARY_RESPONSE_SCHEMA
 
 MAX_TOKEN_COUNT = 2048
 DATE_FORMAT = '%Y-%m-%dT%H:%M:%S.%f'
@@ -61,15 +61,9 @@ class VideoChatterSummaryBuilder:
         system_message_prompt = SystemMessagePromptTemplate.from_template(
             template=VIDEO_CHATTER_BUILDER_PROMPT_SYSTEM_TEMPLATE,
             input_variables={"current_summary": current_summary,
-                             "student_name": self._student_name,
-                             "student_discord_username": self._student_discord_username,
-                             "response_schema": VIDEO_CHATTER_RESPONSE_SCHEMA})
-        system_message_prompt.prompt = system_message_prompt.prompt.partial(student_name=self._student_name,
-                                                                            student_discord_username=self._student_discord_username,
-                                                                            response_schema=VIDEO_CHATTER_RESPONSE_SCHEMA,)
-        # system_message_prompt.prompt = system_message_prompt.prompt.format(
-        #     current_summary=current_summary
-        # )
+                             "response_schema": VIDEO_CHATTER_SUMMARY_RESPONSE_SCHEMA})
+        system_message_prompt.prompt = system_message_prompt.prompt.partial(
+            response_schema=VIDEO_CHATTER_SUMMARY_RESPONSE_SCHEMA, )
 
         human_initial_message = HumanMessage(content=VIDEO_CHATTER_FIRST_HUMAN_INPUT_PROMPT)
 

@@ -10,9 +10,9 @@ from rich.console import Console
 console = Console()
 
 async def generate_meta_summary(mongo_database: MongoDatabaseManager,
-                          summaries_collection_name: str,
-                          base_summary_name: str = "video_chatter",
-                        flip_and_rerun_at_end: bool = False):
+                                summaries_collection_name: str,
+                                base_summary_name: str = "video_chatter",
+                                randomize_and_rerun: bool = False):
     summary_summarizer = SummarySummarizer()
     summaries_collection = mongo_database.get_collection(summaries_collection_name)
     all_student_entries = summaries_collection.find({})
@@ -21,7 +21,7 @@ async def generate_meta_summary(mongo_database: MongoDatabaseManager,
     base_summaries = {}
     meta_summary = "[NO SUMMARY YET]"
     flip_iterator = range(0)
-    if flip_and_rerun_at_end:
+    if randomize_and_rerun:
         flip_iterator = range(1)
     for flip_number in flip_iterator:
         console.rule()
@@ -57,18 +57,31 @@ async def generate_meta_summary(mongo_database: MongoDatabaseManager,
                                   data={"$set": {"meta_summary": meta_summary},
                                         "$push": {"previous_summaries": meta_summary}})
 
-    md_save_path = Path(
-        os.getenv("PATH_TO_COURSE_DROPBOX_FOLDER")) / "course_data" / "chatbot_data" / f"{base_summary_name}_meta_summary_{datetime.now().isoformat()}.md"
-    md_save_path.parent.mkdir(parents=True, exist_ok=True)
+        save_to_markdown(base_summary_name, meta_summary, tag=f"_flip_{flip_number}")
+    save_to_markdown(base_summary_name, meta_summary)
 
+
+
+def save_to_markdown(base_summary_name, meta_summary, tag: str = None):
+    md_save_path = Path(
+        os.getenv(
+            "PATH_TO_COURSE_DROPBOX_FOLDER")) / "course_data" / "chatbot_data"
+    md_filename = f"{base_summary_name}_meta_summary_{datetime.now().isoformat()}"
+    if tag:
+        md_filename += tag
+    md_filename += ".md"
+
+
+    md_save_path.parent.mkdir(parents=True, exist_ok=True)
     with open(md_save_path, 'w') as f:
         f.write(meta_summary)
 
     print(f"Meta summary has been successfully generated and saved at {str(md_save_path)}.")
 
 
+
 if __name__ == '__main__':
     from chatbot.system.filenames_and_paths import VIDEO_CHATTER_SUMMARIES_COLLECTION_NAME
 
     mongo_database = MongoDatabaseManager()
-    asyncio.run(generate_meta_summary(mongo_database, VIDEO_CHATTER_SUMMARIES_COLLECTION_NAME, flip_and_rerun_at_end=True))
+    asyncio.run(generate_meta_summary(mongo_database, VIDEO_CHATTER_SUMMARIES_COLLECTION_NAME, randomize_and_rerun=True))

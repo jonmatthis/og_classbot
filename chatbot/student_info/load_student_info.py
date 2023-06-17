@@ -2,6 +2,7 @@ import csv
 import json
 import logging
 import os
+from pathlib import Path
 from typing import Dict, Any
 
 import discord
@@ -26,10 +27,12 @@ def load_student_info()-> Dict[str, Any]:
 def update_student_info(student_info: Dict[str, Any]):
     info_df = pd.DataFrame.from_dict(student_info, orient='index')
     csv_save_path = os.getenv('PATH_TO_STUDENT_INFO_CSV')
+    Path(csv_save_path).parent.mkdir(parents=True, exist_ok=True)
     info_df.to_csv(csv_save_path, index=False)
     logger.info(f"Updated student info CSV file at {csv_save_path}")
 
     json_save_path = os.getenv('PATH_TO_STUDENT_INFO_JSON')
+    Path(json_save_path).parent.mkdir(parents=True, exist_ok=True)
     with open(json_save_path, 'w') as f:
         json.dump(student_info, f, indent=4)
 
@@ -50,11 +53,11 @@ def add_discord_id_if_necessary(student_discord_id,
                                 student_info:dict,
                                 student_name:str):
     if student_name in student_info:
-        if "discord_id" not in student_info[student_name] or student_info[student_name]['discord_id'] == '':
+        if "discord_user_id" not in student_info[student_name] or student_info[student_name]['discord_user_id'] == '':
             student_info[student_name]['discord_user_id'] = str(student_discord_id)
             update_student_info(student_info)
         else:
-            assert student_info[student_name]['discord_user_id'] == student_discord_id
+            assert student_info[student_name]['discord_user_id'] == str(student_discord_id)
 
 if __name__ == '__main__':
     print(load_student_info())

@@ -15,7 +15,7 @@ async def summarize_threads(server_name: str,
                             all_thread_collection_name: str = None,
                             overwrite: bool = False,
                             save_to_json: bool = True,
-                            channel_name: str = None,):
+                            channel_name: str = None, ):
     mongo_database = MongoDatabaseManager()
     if all_thread_collection_name is None:
         all_thread_collection_name = get_thread_backups_collection_name(server_name=server_name)
@@ -28,9 +28,15 @@ async def summarize_threads(server_name: str,
     for thread_entry in all_thread_collection.find():
 
         if channel_name is not None and thread_entry["channel"] != channel_name:
-            logger.info(f"Skipping thread: `{thread_entry['thread_title']}` created at {str(thread_entry['created_at'])} because it is not in channel: {channel_name}")
+            logger.info(
+                f"Skipping thread: `{thread_entry['thread_title']}` created at {str(thread_entry['created_at'])} because it is not in channel: {channel_name}")
             continue
 
+        print("=====================================================================================================")
+        print("=====================================================================================================")
+        print(
+            f"Thread: {thread_entry['thread_title']}, Channel: {thread_entry['channel']}, Created at: {thread_entry['created_at']}")
+        print(f"{thread_entry['thread_url']}")
 
         if "summary" in thread_entry and not overwrite:
             logger.info(
@@ -41,6 +47,9 @@ async def summarize_threads(server_name: str,
 
         thread_chunks = split_thread_data_into_chunks(messages=thread_entry["messages"])
 
+        for chunk in thread_chunks:
+            if "PTPRR" in chunk["text"]:
+                f = 9
         try:
             thread_summarizer = ThreadSummarizer(use_anthropic=True)
             thread_summary = await thread_summarizer.summarize(thread_chunks=thread_chunks)
@@ -49,7 +58,7 @@ async def summarize_threads(server_name: str,
             thread_summarizer = ThreadSummarizer(use_anthropic=False)
             thread_summary = await thread_summarizer.summarize(thread_chunks=thread_chunks)
 
-        logger.info(f"Saving thread summary to mongo database, summary: {thread_summary}")
+        # logger.info(f"Saving thread summary to mongo database, summary: {thread_summary}")
         thread_cost = 0
         for chunk in thread_chunks:
             thread_cost += chunk["token_count"] * thread_summarizer.dollars_per_token
@@ -87,3 +96,7 @@ if __name__ == "__main__":
                                   overwrite=True,
                                   save_to_json=True,
                                   channel_name="video-chatter-bot"))
+    asyncio.run(summarize_threads(server_name="Neural Control of Real World Human Movement 2023 Summer1",
+                                  overwrite=True,
+                                  save_to_json=True,
+                                  ))

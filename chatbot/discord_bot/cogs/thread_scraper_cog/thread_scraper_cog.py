@@ -1,19 +1,24 @@
 import logging
+import os
+import traceback
 from datetime import datetime
 
 import discord
 from discord.ext import commands
+from dotenv import load_dotenv
 
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
 from chatbot.student_info.find_student_name import find_student_name
 from chatbot.student_info.load_student_info import load_student_info, find_student_discord_id, \
     add_discord_id_if_necessary
 from chatbot.system.environment_variables import get_admin_users, is_course_server
-from chatbot.system.filenames_and_paths import get_thread_backups_collection_name
+from chatbot.system.filenames_and_paths import get_thread_backups_collection_name, get_default_database_json_save_path
 
 logger = logging.getLogger(__name__)
 
 logging.getLogger('discord').setLevel(logging.INFO)
+
+
 class ThreadScraperCog(commands.Cog):
     def __init__(self,
                  bot: discord.Bot,
@@ -44,6 +49,8 @@ class ThreadScraperCog(commands.Cog):
 
             thread_count = 0
 
+            collection_name = get_thread_backups_collection_name(server_name=ctx.guild.name)
+
             # Make sure we're only responding to the admin users
             if not ctx.user.id in get_admin_users():
                 logger.info(f"User {ctx.user_id} is not an admin user")
@@ -69,9 +76,10 @@ class ThreadScraperCog(commands.Cog):
                         update_status_message_string = status_message.content + f"\n{saving_thread_string}"
                         number_of_characters_in_status_message = len(update_status_message_string)
                         print(f"Number of characters in status message: {number_of_characters_in_status_message}")
-                        if number_of_characters_in_status_message>= 1900:
+                        if number_of_characters_in_status_message >= 1900:
                             print(f"Sending new message because {number_of_characters_in_status_message} characters")
-                            status_message = await ctx.author.send("`--2000 character limit reached, sending new message--`")
+                            status_message = await ctx.author.send(
+                                "`--2000 character limit reached, sending new message--`")
                             update_status_message_string = f"---\n{saving_thread_string}"
 
                         status_message = await  status_message.edit(content=update_status_message_string)
@@ -102,6 +110,8 @@ class ThreadScraperCog(commands.Cog):
                         }
 
                         thread_as_list_of_strings = []
+                        word_count_for_this_thread_total = 0
+                        word_count_for_this_thread_student = 0
                         character_count_for_this_thread_total = 0
                         character_count_for_this_thread_student = 0
                         async for message in thread.history(limit=None, oldest_first=True):
@@ -110,11 +120,14 @@ class ThreadScraperCog(commands.Cog):
                                 continue
                             message_author_str = str(message.author)
                             thread_as_list_of_strings.append(f"{message_author_str} said: '{message_content}'")
-                            message_length = len(message_content)
-                            character_count_for_this_thread_total += message_length
+                            message_word_count = len(message_content.split(' '))
+                            word_count_for_this_thread_total += message_word_count
+                            message_character_count = len(message_content)
+                            character_count_for_this_thread_total += message_character_count
 
                             if message.author.id != self.bot.user.id:
-                                character_count_for_this_thread_student += message_length
+                                word_count_for_this_thread_student += message_word_count
+                                character_count_for_this_thread_student += message_character_count
 
                             messsage_update_package = {
                                 'author': message_author_str,
@@ -128,23 +141,40 @@ class ThreadScraperCog(commands.Cog):
                                 'reactions': [str(reaction) for reaction in message.reactions],
                                 'parent_message_id': message.reference.message_id if message.reference else '',
                                 "total_message_count": thread.message_count,
-                                'mongo_entry_updated': datetime.now().isoformat(sep='T')
-
                             }
 
                             self.mongo_database_manager.upsert(
-                                collection_name=get_thread_backups_collection_name(server_name=message.guild.name),
+                                collection_name=collection_name,
                                 query=mongo_query,
                                 data={"$addToSet": {"messages": messsage_update_package},
                                       "$set": {
                                           "thread_as_list_of_strings": thread_as_list_of_strings,
                                           "thread_as_one_string": "\n".join(thread_as_list_of_strings),
+                                          "total_word_count_for_this_thread": word_count_for_this_thread_total,
+                                          "word_count_for_this_thread_student": word_count_for_this_thread_student,
                                           "total_character_count_for_this_thread": character_count_for_this_thread_total,
                                           "character_count_for_this_thread_student": character_count_for_this_thread_student,
+                                          'mongo_entry_updated': datetime.now().isoformat(sep='T')
                                       }
                                       }
                             )
+            if timestamp_backup:
+                load_dotenv()
+                file_name = f"{ctx.guild.name}_thread_backup_{datetime.now().isoformat(sep='_')}.json"
+                database_backup_path = os.getenv("PATH_TO_COURSE_DATABASE_BACKUPS")
+                save_path = os.path.join(database_backup_path, file_name)
+                if database_backup_path is None:
+                    raise Exception("PATH_TO_COURSE_DATABASE_BACKUPS not set in .env file")
+                self.mongo_database_manager.save_json(collection_name=collection_name,
+                                                      save_path = save_path)
+
+                self.mongo_database_manager.save_json(collection_name=collection_name)
+            await status_message.edit(content=f"Finished saving {thread_count} threads")
+            print(f"Finished saving {thread_count} threads")
+
         except Exception as e:
+            traceback.print_exc()
             print(f"Exception in scrape_threads: {e}")
+
             logger.exception(e)
             raise e

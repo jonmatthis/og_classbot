@@ -1,5 +1,6 @@
 import asyncio
 import os
+import random
 from datetime import datetime
 from pathlib import Path
 
@@ -17,21 +18,24 @@ async def generate_video_chatter_summaries(mongo_database: MongoDatabaseManager,
                                            designated_channel_name: str = "introductions",
                                            use_anthropic: bool = False,
                                            overwrite: bool = False,
+                                           randomize_and_repeat: bool = False,
                                            ):
     thread_collection = mongo_database.get_collection(thread_collection_name)
     video_chatter_summaries_collection = mongo_database.get_collection(video_chatter_summaries_collection_name)
 
-    student_usernames = thread_collection.distinct("_student_username")
+
+    student_usernames = list(thread_collection.distinct("_student_username"))
+
 
     number_of_students = len(student_usernames)
     json_save_path =  Path(os.getenv("PATH_TO_COURSE_DROPBOX_FOLDER")) / "course_data" / "chatbot_data" / "video_chatter_summaries.json"
     json_save_path.parent.mkdir(parents=True, exist_ok=True)
 
     with get_openai_callback() as cb:
+        random.shuffle(student_usernames)
+
+        print(f"Student usernames: {'/n'.join(student_usernames)}")
         for student_iterator, student_username in enumerate(student_usernames):
-
-
-
             student_threads_in_designated_channel = [thread for thread in
                                                      thread_collection.find({'_student_username': student_username,
                                                                              "channel": designated_channel_name})]
@@ -122,7 +126,8 @@ async def generate_video_chatter_summaries(mongo_database: MongoDatabaseManager,
 
                 mongo_database.upsert(collection_name=video_chatter_summaries_collection_name,
                                       query=student_mongo_query,
-                                      data={"$set": {"video_chatter_summary": {"summary": updated_video_chatter_summary,
+                                      data={"$set": {"video_chatter_summary": {"thread_summary": thread_summary,
+                                                                                "summary": updated_video_chatter_summary,
                                                                                "summary_creation_time": datetime.now().isoformat(),
                                                                                "model": video_chatter_summary_builder.llm_model}}},
                                       )
@@ -138,7 +143,9 @@ async def generate_video_chatter_summaries(mongo_database: MongoDatabaseManager,
                                  )
 
 
-    mongo_database.save_json(collection_name=video_chatter_summaries_collection_name,
+
+
+        mongo_database.save_json(collection_name=video_chatter_summaries_collection_name,
                              save_path = json_save_path
                              )
 
@@ -150,18 +157,5 @@ if __name__ == '__main__':
                                                  thread_collection_name=thread_collection_name,
                                                  designated_channel_name="video-chatter-bot",
                                                  video_chatter_summaries_collection_name=VIDEO_CHATTER_SUMMARIES_COLLECTION_NAME,
-                                                 use_anthropic=False, ))
-
-    # for attempt in range(10):
-    #     try:
-    #         print(f"Attempt #{attempt + 1}")
-    #         asyncio.run(generate_video_chatter_summaries(mongo_database=MongoDatabaseManager(),
-    #                                                      thread_collection_name=thread_collection_name,
-    #                                                      designated_channel_name="video-chatter-bot",
-    #                                                      video_chatter_summaries_collection_name=VIDEO_CHATTER_SUMMARIES_COLLECTION_NAME,
-    #                                                      use_anthropic=False, ))
-    #         print(f"Successfully generated video chatter summaries for {server_name} on attempt #{attempt + 1}")
-    #         break
-    #     except Exception as e:
-    #         print(f"Error: {e}")
-    #         continue
+                                                 use_anthropic=False,
+                                                 randomize_and_repeat=True))

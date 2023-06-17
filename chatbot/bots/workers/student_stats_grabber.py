@@ -2,26 +2,52 @@ import asyncio
 import os
 from datetime import datetime
 from pathlib import Path
+from typing import Dict
 
 import pandas as pd
+from dotenv import load_dotenv
 from pydantic import BaseModel
 
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
-from chatbot.system.filenames_and_paths import get_thread_backups_collection_name, STUDENT_STATISTICS_COLLECTION_NAME
+from chatbot.system.filenames_and_paths import get_thread_backups_collection_name, STUDENT_STATISTICS_COLLECTION_NAME, \
+    clean_path_string
 from chatbot.student_info.load_student_info import load_student_info
+
+load_dotenv()
+class ClassStatistics(BaseModel):
+    number_of_students: int = 0
+    number_of_threads: int = 0
+    word_count_total: int = 0
+    word_count_students: int = 0
+    message_count_total: int = 0
+    message_count_students: int = 0
+    character_count_total: int = 0
+    character_count_students: int = 0
+
+    average_words_per_thread: float = 0
+    average_words_per_student: float = 0
+    average_messages_per_thread: float = 0
+    average_messages_per_student: float = 0
+    average_characters_per_thread: float = 0
+    average_characters_per_student: float = 0
 
 
 class StudentStatistics(BaseModel):
     number_of_threads: int = 0
-    number_of_messages: int = 0
-    total_word_count: int = 0
+    number_of_messages_total: int = 0
+    number_of_messages_student: int = 0
+    character_count_total: int = 0
+    character_count_student: int = 0
+    word_count_total: int = 0
+    word_count_student: int = 0
+
+    average_words_per_thread_total: float = 0
+    average_words_per_thread_student: float = 0
+
     threads_in_introductions: int = 0
     threads_in_literature_review: int = 0
     threads_in_video_chatter_bot: int = 0
     threads_in_bot_playground: int = 0
-    total_character_count: int = 0
-    student_character_count: int = 0
-    total_student_word_count: int = 0
 
 
 def calculate_student_statistics(student_threads):
@@ -31,14 +57,48 @@ def calculate_student_statistics(student_threads):
     for thread in student_threads:
         statistics = _increment_channel_thread_count(statistics, thread["channel"])
 
-        statistics.number_of_messages += thread["total_message_count"]
-        statistics.total_character_count += thread["total_character_count_for_this_thread"]
-        statistics.student_character_count += thread["student_character_count_for_this_thread"]
+        statistics.number_of_messages_total += len(thread["messages"])
         for message in thread["messages"]:
-            if message["author"] == thread["_student_username"]:
-                statistics.total_student_word_count += len(message["content"].split())
+            message_word_count = len(message["content"].split())
+            messsage_character_count = len(message["content"])
 
+            statistics.character_count_total += len(message["content"])
+            statistics.word_count_total += len(message["content"].split())
+
+            if not message["author_id"] == int(os.getenv("DISCORD_BOT_ID")):
+                statistics.number_of_messages_student += 1
+                statistics.character_count_student += messsage_character_count
+                statistics.word_count_student += message_word_count
+    if statistics.number_of_threads > 0:
+        statistics.average_words_per_thread_total = statistics.word_count_total // statistics.number_of_threads
+        statistics.average_words_per_thread_student = statistics.word_count_student // statistics.number_of_threads
     return statistics
+
+
+def calculate_class_statistics(all_student_statistics: Dict[str, StudentStatistics]):
+    class_statistics = ClassStatistics()
+    class_statistics.number_of_students = len(all_student_statistics)
+
+    for student_name, student_stats in all_student_statistics.items():
+        class_statistics.word_count_total += student_stats.word_count_total
+        class_statistics.word_count_students += student_stats.word_count_student
+        class_statistics.message_count_total += student_stats.number_of_messages_total
+        class_statistics.message_count_students += student_stats.number_of_messages_student
+        class_statistics.character_count_total += student_stats.character_count_total
+        class_statistics.character_count_students += student_stats.character_count_student
+
+    if class_statistics.number_of_students > 0:
+        class_statistics.average_words_per_student = class_statistics.word_count_students // class_statistics.number_of_students
+        class_statistics.average_messages_per_student = class_statistics.message_count_students // class_statistics.number_of_students
+        class_statistics.average_characters_per_student = class_statistics.character_count_students // class_statistics.number_of_students
+
+    if class_statistics.number_of_threads > 0:
+        class_statistics.average_words_per_thread = class_statistics.word_count_total // class_statistics.number_of_threads
+        class_statistics.average_messages_per_thread = class_statistics.message_count_total // class_statistics.number_of_threads
+        class_statistics.average_characters_per_thread = class_statistics.character_count_total // class_statistics.number_of_threads
+
+    return class_statistics
+
 
 
 def _increment_channel_thread_count(statistics: StudentStatistics, channel_name: str):
@@ -66,7 +126,7 @@ async def grab_student_statistics(mongo_database: MongoDatabaseManager,
 
     student_names = list(student_info.keys())
 
-    stats_calculated_on = datetime.now().isoformat()
+    stats_calculated_on = datetime.now().date()
     all_student_statistics = {}
     for student_number, student_name in enumerate(student_names):
         student_username = student_info[student_name]["discord_username"]
@@ -78,22 +138,38 @@ async def grab_student_statistics(mongo_database: MongoDatabaseManager,
         student_threads = [thread for thread in
                            thread_collection.find({'_student_name': student_name})]
 
+
+
         one_student_statistics = calculate_student_statistics(student_threads)
-        student_dict = one_student_statistics.dict(exclude={"_id", "stats_calculation_time"})
-        student_dict["discord_username"] = student_info[student_name]["discord_username"]
-        all_student_statistics[student_name] = student_dict
+        all_student_statistics[student_name] = one_student_statistics
 
-
-        if all_student_statistics[student_name]["total_student_word_count"] == 0:
+        if all_student_statistics[student_name].word_count_student == 0:
             print(f"WARNING: {student_name} has no student messages")
         mongo_database.upsert(collection_name=STUDENT_STATISTICS_COLLECTION_NAME,
-                              query={"stats_calculation_time": stats_calculated_on},
-                              data={"$set": {student_name: one_student_statistics.dict()}})
+                              query={"student_name": student_name},
+                              data={"$set":  one_student_statistics.dict()})
 
-    mongo_database.save_json(collection_name=STUDENT_STATISTICS_COLLECTION_NAME, )
+    # Calculate class statistics and save to DB or file
+    class_stats = calculate_class_statistics(all_student_statistics)
+    mongo_database.upsert(collection_name=STUDENT_STATISTICS_COLLECTION_NAME,
+                          query={"student_name": "class_statistics"},
+                          data={"$set": class_stats.dict()})
 
-    df = pd.DataFrame.from_dict(all_student_statistics).T
-    df.to_csv(str(Path(os.getenv("PATH_TO_COURSE_DROPBOX_FOLDER")) / f"student_stats_{datetime.now().isoformat()}.csv"))
+    mongo_database.save_json(collection_name=STUDENT_STATISTICS_COLLECTION_NAME)
+
+
+    save_to_csv(all_student_statistics)
+
+
+def save_to_csv(all_student_statistics):
+    all_stats = {key: value.dict() for key, value in all_student_statistics.items()}
+    df = pd.DataFrame.from_dict(all_stats).T
+    file_name = f"student_stats_{datetime.now().isoformat()}"
+    file_name = clean_path_string(file_name)
+    file_name += ".csv"
+    save_path = Path(os.getenv("PATH_TO_COURSE_DROPBOX_FOLDER")) / "course_data" / "student_info" / file_name
+    save_path.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(str(save_path))
 
 
 if __name__ == '__main__':

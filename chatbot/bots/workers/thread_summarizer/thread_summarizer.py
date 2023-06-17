@@ -27,6 +27,7 @@ class ThreadSummarizer:
 
 
         SUMMARY:"""
+
         self.base_summary_prompt = PromptTemplate(template=prompt_template, input_variables=["text"])
 
         # self.base_summary_prompt = PromptTemplate(

@@ -1,5 +1,6 @@
 import json
 import logging
+import traceback
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
@@ -9,7 +10,7 @@ from pymongo import MongoClient
 
 from chatbot.system.environment_variables import get_mongo_uri, get_mongo_database_name
 from chatbot.system.filenames_and_paths import get_default_database_json_save_path, \
-    STUDENT_PROFILES_COLLECTION_NAME, STUDENT_SUMMARIES_COLLECTION_NAME
+    STUDENT_SUMMARIES_COLLECTION_NAME, clean_path_string
 
 logger = logging.getLogger(__name__)
 
@@ -53,36 +54,51 @@ class MongoDatabaseManager:
         query = query if query is not None else {}
         return self._database[collection_name].find(query)
 
-    def save_json(self, collection_name: str, query: dict = None, save_path: Union[str, Path] = None):
-        query = query if query is not None else defaultdict()
-        collection = self._database[collection_name]
-        save_path = save_path if save_path is not None else get_default_database_json_save_path(collection_name,
-                                                                                                timestamp=True)
-        data = list(collection.find(query))
+    def save_json(self,
+                  collection_name: str,
+                  query: dict = None,
+                  save_path: Union[str, Path] = None):
+        try:
+            query = query if query is not None else defaultdict()
+            collection = self._database[collection_name]
+            if save_path is not None:
+                file_name = Path(save_path).name
+                if file_name.endswith(".json"):
+                    file_name = file_name[:-5]
+                file_name = clean_path_string(file_name)
+                save_path = Path(save_path).parent / file_name
+            else:
+                get_default_database_json_save_path(filename=collection_name,
+                                                    timestamp=True)
 
-        save_path = str(save_path)
-        if save_path[-5:] != ".json":
-            save_path += ".json"
+            data = list(collection.find(query))
 
-        for document in data:
-            document["_id"] = str(document["_id"])
+            save_path = str(save_path)
+            if save_path[-5:] != ".json":
+                save_path += ".json"
 
-        with open(save_path, 'w') as file:
-            json.dump(data, file, indent=4, default=default_serialize)
+            for document in data:
+                document["_id"] = str(document["_id"])
+            Path(save_path).parent.mkdir(parents=True, exist_ok=True)
+            with open(save_path, 'w') as file:
+                json.dump(data, file, indent=4, default=default_serialize)
+        except Exception as e:
+            traceback.print_exc()
+            print(f"Error saving json: {e}")
+            raise e
 
         logger.info(f"Saved {len(data)} documents to {save_path}")
 
     def close(self):
         self._client.close()
 
-
     def get_student_summary(self, discord_username: str):
-        student_entry = self._database[STUDENT_SUMMARIES_COLLECTION_NAME].find_one({"discord_username": discord_username})
+        student_entry = self._database[STUDENT_SUMMARIES_COLLECTION_NAME].find_one(
+            {"discord_username": discord_username})
         if student_entry is None:
             return
 
         return student_entry["student_summary"]["summary"]
-
 
 
 if __name__ == "__main__":
