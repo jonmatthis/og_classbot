@@ -15,7 +15,7 @@ async def generate_meta_summary(mongo_database: MongoDatabaseManager,
                                 base_summary_name: str = "video_chatter",
                                 randomize_and_rerun: bool = False,
                                 overwrite: bool = False,):
-    summary_summarizer = SummarySummarizer()
+    summary_summarizer = SummarySummarizer(summary_type=base_summary_name,)
     summaries_collection = mongo_database.get_collection(summaries_collection_name)
     all_student_entries = summaries_collection.find({})
     all_student_entries = list(all_student_entries)
@@ -52,7 +52,7 @@ async def generate_meta_summary(mongo_database: MongoDatabaseManager,
             thread_summaries = []
             for thread in student_entry["threads"]:
                 thread_summaries.append(f":{thread['thread_url']}\n\n"
-                                        f"{thread['thread_summary']['summary']}\n\n")
+                                        f"{thread['summary']['summary']}\n\n")
             thread_summaries = "\n\n".join(thread_summaries)
             to_markdown = markdown_frontmatter + thread_summaries + "\n\n" + "## Schematized  + student_summary"
             save_to_markdown(text=to_markdown,
@@ -75,8 +75,8 @@ async def generate_meta_summary(mongo_database: MongoDatabaseManager,
             # print(f"Current meta summary:\n\n{meta_summary}\n\n")
 
             meta_summary = await summary_summarizer.update_meta_summary_based_on_new_summary(
-                current_meta_summary=meta_summary,
-                new_summary=student_summary,
+                current_schematized_summary=meta_summary,
+                new_conversation_summary=student_summary,
             )
             mongo_database.upsert(collection_name="video_chatter_meta_summary",
                                   query={},

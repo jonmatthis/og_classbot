@@ -12,8 +12,9 @@ from langchain.prompts import HumanMessagePromptTemplate, ChatPromptTemplate, Sy
 from langchain.schema import AIMessage, HumanMessage
 
 from chatbot.bots.workers.video_chatter_summary_builder.video_chatter_summary_builder_prompts import \
-    VIDEO_CHATTER_NEW_SUMMARY_HUMAN_INPUT_PROMPT, VIDEO_CHATTER_BUILDER_PROMPT_SYSTEM_TEMPLATE, \
-    VIDEO_CHATTER_FIRST_HUMAN_INPUT_PROMPT, VIDEO_CHATTER_SUMMARY_RESPONSE_SCHEMA
+    VIDEO_CHATTER_NEW_SUMMARY_HUMAN_INPUT_PROMPT, \
+    VIDEO_CHATTER_FIRST_HUMAN_INPUT_PROMPT, VIDEO_CHATTER_SUMMARY_RESPONSE_SCHEMA, \
+    VIDEO_CHATTER_SCHEMATIZED_SUMMARY_SYSTEM_TEMPLATE
 
 MAX_TOKEN_COUNT = 2048
 DATE_FORMAT = '%Y-%m-%dT%H:%M:%S.%f'
@@ -59,32 +60,33 @@ class VideoChatterSummaryBuilder:
 
     def _create_chat_prompt(self, current_summary: str):
         system_message_prompt = SystemMessagePromptTemplate.from_template(
-            template=VIDEO_CHATTER_BUILDER_PROMPT_SYSTEM_TEMPLATE,
-            input_variables={"current_summary": current_summary,
-                             "response_schema": VIDEO_CHATTER_SUMMARY_RESPONSE_SCHEMA})
+            template=VIDEO_CHATTER_SCHEMATIZED_SUMMARY_SYSTEM_TEMPLATE,
+            input_variables=["response_schema"])
         system_message_prompt.prompt = system_message_prompt.prompt.partial(
             response_schema=VIDEO_CHATTER_SUMMARY_RESPONSE_SCHEMA, )
 
         human_initial_message = HumanMessage(content=VIDEO_CHATTER_FIRST_HUMAN_INPUT_PROMPT)
 
         ai_response = AIMessage(
-            content="Ok, I'm ready to summarize the conversation. I will be sure to follow that schema")
+            content="Ok, I'm ready to summarize the conversation. I will be sure to follow the perscribed schema")
 
         human_message_prompt = HumanMessagePromptTemplate.from_template(
             template=VIDEO_CHATTER_NEW_SUMMARY_HUMAN_INPUT_PROMPT,
-            input_variables=["new_conversation_summary"]
+            input_variables=["student_initials","new_conversation_summary", "current_schematized_summary"]
         )
         return ChatPromptTemplate.from_messages(
             [system_message_prompt, human_initial_message, ai_response, human_message_prompt]
         )
 
     async def update_video_chatter_summary_based_on_new_conversation(self,
-                                                                     current_video_chatter_summary: str,
+                                                                        student_initials: str,
+                                                                     current_schematized_summary: str,
                                                                      new_conversation_summary: str,
                                                                      ) -> str:
 
         return await self._llm_chain.arun(
-            current_summary=current_video_chatter_summary,
+            student_initials=student_initials,
+            current_schematized_summary=current_schematized_summary,
             new_conversation_summary=new_conversation_summary,
         )
 

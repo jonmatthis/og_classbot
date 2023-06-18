@@ -18,7 +18,6 @@ async def generate_video_chatter_summaries(mongo_database: MongoDatabaseManager,
                                            designated_channel_name: str = "introductions",
                                            use_anthropic: bool = False,
                                            overwrite: bool = False,
-                                           randomize_and_repeat: bool = False,
                                            ):
     thread_collection = mongo_database.get_collection(thread_collection_name)
     video_chatter_summaries_collection = mongo_database.get_collection(video_chatter_summaries_collection_name)
@@ -47,7 +46,7 @@ async def generate_video_chatter_summaries(mongo_database: MongoDatabaseManager,
                 continue
 
             print(f"-----------------------------------------------------------------------------\n"
-                  f"Generating VideoChatter for {student_username}"
+                  f"Generating VideoChatter for {student_username}\n"
                   f"Student#{student_iterator + 1} of {number_of_students}\n"
                   f"This student has e {len(student_threads_in_designated_channel)} threads in {designated_channel_name}.\n"
                   f"-----------------------------------------------------------------------------\n")
@@ -56,6 +55,7 @@ async def generate_video_chatter_summaries(mongo_database: MongoDatabaseManager,
 
                 student_discord_username = thread_entry["_student_username"]
                 student_name = thread_entry["_student_name"]
+                student_initials = "".join([name[0].upper() for name in student_name.split(" ")])
                 student_discord_id = thread_entry["discord_user_id"]
                 thread_channel_name = thread_entry["channel"]
                 server_name = thread_entry["server_name"]
@@ -118,7 +118,8 @@ async def generate_video_chatter_summaries(mongo_database: MongoDatabaseManager,
                 print(f"Current student summary (before update):\n{current_video_chatter_summary}\n")
 
                 updated_video_chatter_summary = await video_chatter_summary_builder.update_video_chatter_summary_based_on_new_conversation(
-                    current_video_chatter_summary=current_video_chatter_summary,
+                    student_initials=student_initials,
+                    current_schematized_summary=current_video_chatter_summary,
                     new_conversation_summary=thread_summary, )
 
                 print(f"Updated summary (after update):\n{updated_video_chatter_summary}\n\n---\n\n")
@@ -158,4 +159,4 @@ if __name__ == '__main__':
                                                  designated_channel_name="video-chatter-bot",
                                                  video_chatter_summaries_collection_name=VIDEO_CHATTER_SUMMARIES_COLLECTION_NAME,
                                                  use_anthropic=False,
-                                                 randomize_and_repeat=True))
+                                                 overwrite=True,))

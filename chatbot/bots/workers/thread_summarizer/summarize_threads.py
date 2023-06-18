@@ -75,7 +75,7 @@ async def summarize_threads(server_name: str,
                                 "cost": thread_cost,
                                 "model": thread_summarizer.llm_model,
                                 "created_at": datetime.now().isoformat(),
-                                "date": datetime.now().isoformat()}
+                                }
                 }
             }
         )

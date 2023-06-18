@@ -10,12 +10,11 @@ from langchain.memory import ConversationBufferMemory
 from langchain.prompts import HumanMessagePromptTemplate, ChatPromptTemplate, SystemMessagePromptTemplate
 
 from chatbot.bots.workers.video_chatter_summary_builder.video_chatter_summary_builder_prompts import \
-    VIDEO_CHATTER_SUMMARY_RESPONSE_SCHEMA
+    VIDEO_CHATTER_SUMMARY_RESPONSE_SCHEMA, VIDEO_CHATTER_SCHEMATIZED_SUMMARY_SYSTEM_TEMPLATE, \
+    VIDEO_CHATTER_NEW_SUMMARY_HUMAN_INPUT_PROMPT
 
 GENERIC_META_SUMMARY_PROMPT = """
-I will be showing you multiple summaries of the same video, as described by different people.
-
-Your job is to create a comprehensive summary of the video, by combining the different summaries you see.
+I will be showing you multiple summaries of the same thing. Your job is to update your current meta summary based on the new summary.
 
 Here is your current meta summary:
  
@@ -24,8 +23,7 @@ Here is your current meta summary:
 The summaries will follow the following schema:
 
 {response_schema}
-
-   
+  
 
 """
 
@@ -37,6 +35,7 @@ DATE_FORMAT = '%Y-%m-%dT%H:%M:%S.%f'
 
 META_SUMMARY_PROMPTS = {
     "generic": GENERIC_META_SUMMARY_PROMPT,
+    "video_chatter": VIDEO_CHATTER_SCHEMATIZED_SUMMARY_SYSTEM_TEMPLATE,
 }
 
 
@@ -73,25 +72,29 @@ class SummarySummarizer:
     def _create_chat_prompt(self):
         system_message_prompt = SystemMessagePromptTemplate.from_template(
             template=META_SUMMARY_PROMPTS[self.summary_type],
-            input_variables=["current_meta_summary", "response_schema"])
+            input_variables=["response_schema"])
 
 
         human_message_prompt = HumanMessagePromptTemplate.from_template(
-            template="Here's a new summary:\n\n {new_summary} \n\n Update your current meta summary accordingly ",
-            input_variables=["new_summary"]
+            template= VIDEO_CHATTER_NEW_SUMMARY_HUMAN_INPUT_PROMPT,
+            input_variables=["student_initials",
+                             "new_conversation_summary",
+                             "current_schematized_summary"]
         )
         return ChatPromptTemplate.from_messages(
             [system_message_prompt, human_message_prompt]
         )
 
     async def update_meta_summary_based_on_new_summary(self,
-                                                       current_meta_summary: str,
-                                                       new_summary: str,
+                                                       student_intials: str,
+                                                       current_schematized_summary: str,
+                                                       new_conversation_summary: str,
                                                        ) -> str:
         return await self._llm_chain.arun(
-            current_meta_summary=current_meta_summary,
+            student_initials=student_intials,
+            current_schematized_summary=current_schematized_summary,
             response_schema=VIDEO_CHATTER_SUMMARY_RESPONSE_SCHEMA,
-            new_summary=new_summary,
+            new_conversation_summary=new_conversation_summary,
         )
 
 
