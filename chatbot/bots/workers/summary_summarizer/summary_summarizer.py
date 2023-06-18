@@ -10,19 +10,22 @@ from langchain.memory import ConversationBufferMemory
 from langchain.prompts import HumanMessagePromptTemplate, ChatPromptTemplate, SystemMessagePromptTemplate
 
 from chatbot.bots.workers.video_chatter_summary_builder.video_chatter_summary_builder_prompts import \
-    VIDEO_CHATTER_SUMMARY_RESPONSE_SCHEMA, VIDEO_CHATTER_META_SUMMARY_RESPONSE_SCHEMA
+    VIDEO_CHATTER_SUMMARY_RESPONSE_SCHEMA
 
 GENERIC_META_SUMMARY_PROMPT = """
-I'm going to feed you one summary at a time and I want you to keep a running 'meta-summary' 
-that captures the overall structure of the entries. 
+I will be showing you multiple summaries of the same video, as described by different people.
+
+Your job is to create a comprehensive summary of the video, by combining the different summaries you see.
 
 Here is your current meta summary:
  
 {current_meta_summary}
 
-Your response should follow this schema:
+The summaries will follow the following schema:
 
 {response_schema}
+
+   
 
 """
 
@@ -74,7 +77,7 @@ class SummarySummarizer:
 
 
         human_message_prompt = HumanMessagePromptTemplate.from_template(
-            template="Here's a new summary: {new_summary} update your current meta summary accordingly ",
+            template="Here's a new summary:\n\n {new_summary} \n\n Update your current meta summary accordingly ",
             input_variables=["new_summary"]
         )
         return ChatPromptTemplate.from_messages(
@@ -87,7 +90,7 @@ class SummarySummarizer:
                                                        ) -> str:
         return await self._llm_chain.arun(
             current_meta_summary=current_meta_summary,
-            response_schema=VIDEO_CHATTER_META_SUMMARY_RESPONSE_SCHEMA,
+            response_schema=VIDEO_CHATTER_SUMMARY_RESPONSE_SCHEMA,
             new_summary=new_summary,
         )
 

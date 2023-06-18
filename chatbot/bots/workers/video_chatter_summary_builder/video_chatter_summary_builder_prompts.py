@@ -34,24 +34,6 @@ VIDEO_CHATTER_BUILDER_PROMPT_SYSTEM_TEMPLATE = """
      BE BRIEF!
     """
 
-VIDEO_CHATTER_META_SUMMARY_RESPONSE_SCHEMA = """
-# Video Description: 
-[Describe this conversation in a few sentences]
-
-# The main task
- - [Describe the main task in two or three bullet points]
-
-# Subtasks (list up to 5-8 subtasks)
- - [one subtask per bullet point]
-    - [Scientific field 1]  ([how does this field relate to the subtask])   
-             
-# What kind of data is represented in the video?
-- [list the types of data in the video]
-
-# Tags
-- [list tags related to topics represented in these conversations]
-"""
-
 VIDEO_CHATTER_SUMMARY_RESPONSE_SCHEMA = """
 
 # Video Description: 
@@ -68,8 +50,9 @@ VIDEO_CHATTER_SUMMARY_RESPONSE_SCHEMA = """
 - [list the types of data in the video]
      
 # Tags
-- [list tags related to topics represented in these conversations]
+- [list tags related to topics related to this video, these will help guide searches for related articles on PubMed. Format is `#kebab-case-lowercase`, include as many as you need to]
 """
+
 
 VIDEO_CHATTER_FIRST_HUMAN_INPUT_PROMPT = """
     
