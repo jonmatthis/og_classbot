@@ -45,8 +45,8 @@ async def generate_meta_summary(mongo_database: MongoDatabaseManager,
 
             student_initials = "".join([name[0].upper() for name in student_name.split(" ")])
 
-            student_summary = student_entry[f"{base_summary_name}_summary"]["summary"]
-
+            schematized_student_summary = student_entry[f"{base_summary_name}_summary"]["summary"]
+            schematized_student_summary = format_summary_output(schematized_student_summary)
 
             markdown_frontmatter = f"# Student: {student_initials}\n\n## Conversation summaries:\n\n"
             thread_summaries = []
@@ -54,8 +54,9 @@ async def generate_meta_summary(mongo_database: MongoDatabaseManager,
                 thread_summaries.append(f":{thread['thread_url']}\n\n"
                                         f"{thread['summary']['summary']}\n\n")
             thread_summaries = "\n\n".join(thread_summaries)
-            to_markdown = markdown_frontmatter + thread_summaries + "\n\n" + "## Schematized  + student_summary"
+            to_markdown = markdown_frontmatter + thread_summaries + "\n\n" + "## Schematized student_summary\n\n" + schematized_student_summary + "\n\n"
             save_to_markdown(text=to_markdown,
+                             subfolder = "student_summaries",
                              base_summary_name=base_summary_name,
                              tag=f"_{student_initials}",
                              )
@@ -69,15 +70,17 @@ async def generate_meta_summary(mongo_database: MongoDatabaseManager,
             all_student_summaries.append(f"## Student: {student_initials}\n\n "
                                          f"Chat creation time: {student_entry['thread_creation_time']}\n"
                                          f"Threads involved: {[thread['thread_url'] for thread in student_entry['threads']]}\n\n"
-                                         f"{student_summary}\n\n"
+                                         f"{schematized_student_summary}\n\n"
                                          f"_________________________________________________________________________\n\n")
 
             # print(f"Current meta summary:\n\n{meta_summary}\n\n")
 
             meta_summary = await summary_summarizer.update_meta_summary_based_on_new_summary(
+                student_initials=student_initials,
                 current_schematized_summary=meta_summary,
-                new_conversation_summary=student_summary,
+                new_conversation_summary=schematized_student_summary,
             )
+            meta_summary = format_summary_output(meta_summary)
             mongo_database.upsert(collection_name="video_chatter_meta_summary",
                                   query={},
                                   data={"$set": {"meta_summary": meta_summary},
@@ -85,11 +88,10 @@ async def generate_meta_summary(mongo_database: MongoDatabaseManager,
 
             print(f"Updated meta summary:\n\n{meta_summary}\n\n")
 
-
-
-        save_to_markdown(base_summary_name,
-                         meta_summary,
-                         tag=f"_flip_{flip_number}")
+        if randomize_and_rerun:
+            save_to_markdown(base_summary_name,
+                             meta_summary,
+                             tag=f"_flip_{flip_number}")
 
     save_to_markdown(base_summary_name=base_summary_name,
                      text=meta_summary,
@@ -100,11 +102,32 @@ async def generate_meta_summary(mongo_database: MongoDatabaseManager,
                      tag="_all_summaries")
 
 
-def save_to_markdown(base_summary_name: str, text, tag: str = None, save_path: Path = None):
+def format_summary_output(schematized_student_summary):
+    front_parts = ["```response-schema\n", "```schematized-summary\n"]
+    back_parts = ["```", "```\n"]
+
+    for front_part in front_parts:
+        if schematized_student_summary[:len(front_part)] == front_part:
+            schematized_student_summary = schematized_student_summary[len(front_part):]
+
+    for back_part in back_parts:
+        if schematized_student_summary[-len(back_part):] == back_part:
+            schematized_student_summary = schematized_student_summary[:-len(back_part)]
+
+    return schematized_student_summary
+
+
+def save_to_markdown(base_summary_name: str,
+                     text, tag: str = None,
+                     subfolder: str = None,
+                     save_path: Path = None):
     if not save_path:
         save_path = Path(
             os.getenv(
                 "PATH_TO_COURSE_DROPBOX_FOLDER")) / "course_data" / "chatbot_data" / base_summary_name
+    if subfolder:
+        save_path = save_path / subfolder
+
     save_path.mkdir(parents=True, exist_ok=True)
 
     md_filename = f"{base_summary_name}"

@@ -45,19 +45,27 @@ def find_student_discord_id(context: discord.ApplicationContext,
             return member.id
         if f"{str(member)}" in discord_username.split('#')[0].lower()+"#0":
             return member.id
-    print(f'Could not find a user with the username {discord_username}')
+        if f"{str(member)}" in discord_username.split('#')[0].lower() + "#0":
+            return member.id
+
+
 
 
 
 def add_discord_id_if_necessary(student_discord_id,
                                 student_info:dict,
                                 student_name:str):
-    if student_name in student_info:
-        if "discord_user_id" not in student_info[student_name] or student_info[student_name]['discord_user_id'] == '':
-            student_info[student_name]['discord_user_id'] = str(student_discord_id)
-            update_student_info(student_info)
-        else:
-            assert student_info[student_name]['discord_user_id'] == str(student_discord_id)
+    try:
+        if student_name in student_info:
+            if "discord_user_id" not in student_info[student_name] or student_info[student_name]['discord_user_id'] == '':
+                student_info[student_name]['discord_user_id'] = str(student_discord_id)
+                update_student_info(student_info)
+            else:
+                assert student_info[student_name]['discord_user_id'] == str(student_discord_id)
+    except AssertionError:
+        print(f"Student {student_name} has a different discord ID in the student_info.csv file.'student_info[student_name]['discord_user_id']': [{student_info[student_name]['discord_user_id']}], 'student_discord_id': [{student_discord_id}]")
+        raise AssertionError
+
 
 if __name__ == '__main__':
     print(load_student_info())

@@ -12,9 +12,9 @@ from langchain.prompts import HumanMessagePromptTemplate, ChatPromptTemplate, Sy
 from langchain.schema import AIMessage, HumanMessage
 
 from chatbot.bots.workers.video_chatter_summary_builder.video_chatter_summary_builder_prompts import \
-    VIDEO_CHATTER_NEW_SUMMARY_HUMAN_INPUT_PROMPT, \
+    VIDEO_CHATTER_META_SUMMARY_HUMAN_INPUT_PROMPT, \
     VIDEO_CHATTER_FIRST_HUMAN_INPUT_PROMPT, VIDEO_CHATTER_SUMMARY_RESPONSE_SCHEMA, \
-    VIDEO_CHATTER_SCHEMATIZED_SUMMARY_SYSTEM_TEMPLATE
+    VIDEO_CHATTER_SCHEMATIZED_SUMMARY_SYSTEM_TEMPLATE, VIDEO_CHATTER_INDIVIDUAL_SUMMARY_HUMAN_INPUT_PROMPT
 
 MAX_TOKEN_COUNT = 2048
 DATE_FORMAT = '%Y-%m-%dT%H:%M:%S.%f'
@@ -65,17 +65,14 @@ class VideoChatterSummaryBuilder:
         system_message_prompt.prompt = system_message_prompt.prompt.partial(
             response_schema=VIDEO_CHATTER_SUMMARY_RESPONSE_SCHEMA, )
 
-        human_initial_message = HumanMessage(content=VIDEO_CHATTER_FIRST_HUMAN_INPUT_PROMPT)
-
-        ai_response = AIMessage(
-            content="Ok, I'm ready to summarize the conversation. I will be sure to follow the perscribed schema")
-
         human_message_prompt = HumanMessagePromptTemplate.from_template(
-            template=VIDEO_CHATTER_NEW_SUMMARY_HUMAN_INPUT_PROMPT,
-            input_variables=["student_initials","new_conversation_summary", "current_schematized_summary"]
+            template=VIDEO_CHATTER_INDIVIDUAL_SUMMARY_HUMAN_INPUT_PROMPT,
+            input_variables=["student_initials",
+                             "new_conversation_summary",
+                             ]
         )
         return ChatPromptTemplate.from_messages(
-            [system_message_prompt, human_initial_message, ai_response, human_message_prompt]
+            [system_message_prompt,human_message_prompt]
         )
 
     async def update_video_chatter_summary_based_on_new_conversation(self,
@@ -86,7 +83,6 @@ class VideoChatterSummaryBuilder:
 
         return await self._llm_chain.arun(
             student_initials=student_initials,
-            current_schematized_summary=current_schematized_summary,
             new_conversation_summary=new_conversation_summary,
         )
 

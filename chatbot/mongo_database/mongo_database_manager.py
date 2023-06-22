@@ -68,8 +68,9 @@ class MongoDatabaseManager:
                 file_name = clean_path_string(file_name)
                 save_path = Path(save_path).parent / file_name
             else:
-                get_default_database_json_save_path(filename=collection_name,
+                save_path =  get_default_database_json_save_path(filename=collection_name,
                                                     timestamp=True)
+
 
             data = list(collection.find(query))
 

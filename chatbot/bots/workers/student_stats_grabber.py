@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import os
 from datetime import datetime
 from pathlib import Path
@@ -14,6 +15,9 @@ from chatbot.system.filenames_and_paths import get_thread_backups_collection_nam
 from chatbot.student_info.load_student_info import load_student_info
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
+
 class ClassStatistics(BaseModel):
     number_of_students: int = 0
     number_of_threads: int = 0
@@ -33,6 +37,8 @@ class ClassStatistics(BaseModel):
 
 
 class StudentStatistics(BaseModel):
+
+
     number_of_threads: int = 0
     number_of_messages_total: int = 0
     number_of_messages_student: int = 0
@@ -49,6 +55,7 @@ class StudentStatistics(BaseModel):
     threads_in_video_chatter_bot: int = 0
     threads_in_bot_playground: int = 0
 
+    threads_with_green_check_emoji: int = 0
 
 def calculate_student_statistics(student_threads):
     statistics = StudentStatistics()
@@ -56,6 +63,9 @@ def calculate_student_statistics(student_threads):
 
     for thread in student_threads:
         statistics = _increment_channel_thread_count(statistics, thread["channel"])
+
+        if thread["green_check_emoji_present"]:
+            statistics.threads_with_green_check_emoji += 1
 
         statistics.number_of_messages_total += len(thread["messages"])
         for message in thread["messages"]:
@@ -69,9 +79,11 @@ def calculate_student_statistics(student_threads):
                 statistics.number_of_messages_student += 1
                 statistics.character_count_student += messsage_character_count
                 statistics.word_count_student += message_word_count
+
     if statistics.number_of_threads > 0:
         statistics.average_words_per_thread_total = statistics.word_count_total // statistics.number_of_threads
         statistics.average_words_per_thread_student = statistics.word_count_student // statistics.number_of_threads
+
     return statistics
 
 
@@ -170,6 +182,7 @@ def save_to_csv(all_student_statistics):
     save_path = Path(os.getenv("PATH_TO_COURSE_DROPBOX_FOLDER")) / "course_data" / "student_info" / file_name
     save_path.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(str(save_path))
+    print(f"Saved student statistics to {save_path}")
 
 
 if __name__ == '__main__':

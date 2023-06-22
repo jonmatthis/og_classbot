@@ -11,7 +11,7 @@ from langchain.prompts import HumanMessagePromptTemplate, ChatPromptTemplate, Sy
 
 from chatbot.bots.workers.video_chatter_summary_builder.video_chatter_summary_builder_prompts import \
     VIDEO_CHATTER_SUMMARY_RESPONSE_SCHEMA, VIDEO_CHATTER_SCHEMATIZED_SUMMARY_SYSTEM_TEMPLATE, \
-    VIDEO_CHATTER_NEW_SUMMARY_HUMAN_INPUT_PROMPT
+    VIDEO_CHATTER_META_SUMMARY_HUMAN_INPUT_PROMPT
 
 GENERIC_META_SUMMARY_PROMPT = """
 I will be showing you multiple summaries of the same thing. Your job is to update your current meta summary based on the new summary.
@@ -76,7 +76,7 @@ class SummarySummarizer:
 
 
         human_message_prompt = HumanMessagePromptTemplate.from_template(
-            template= VIDEO_CHATTER_NEW_SUMMARY_HUMAN_INPUT_PROMPT,
+            template= VIDEO_CHATTER_META_SUMMARY_HUMAN_INPUT_PROMPT,
             input_variables=["student_initials",
                              "new_conversation_summary",
                              "current_schematized_summary"]
@@ -86,12 +86,12 @@ class SummarySummarizer:
         )
 
     async def update_meta_summary_based_on_new_summary(self,
-                                                       student_intials: str,
+                                                       student_initials: str,
                                                        current_schematized_summary: str,
                                                        new_conversation_summary: str,
                                                        ) -> str:
         return await self._llm_chain.arun(
-            student_initials=student_intials,
+            student_initials=student_initials,
             current_schematized_summary=current_schematized_summary,
             response_schema=VIDEO_CHATTER_SUMMARY_RESPONSE_SCHEMA,
             new_conversation_summary=new_conversation_summary,
