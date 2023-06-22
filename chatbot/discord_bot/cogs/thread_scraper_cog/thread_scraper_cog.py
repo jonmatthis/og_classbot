@@ -146,27 +146,25 @@ class ThreadScraperCog(commands.Cog):
                     green_check_emoji_present_in_thread = False
                     async for message in thread.history(limit=None, oldest_first=True):
 
+                        message_author_str = str(message.author)
+
                         if anonymize:
                             message = anonymize_message(message)
+                            if not message.author.id == self.bot.user.id:
+                                message_author_str = student_uuid
+
+
 
                         message_content = message.content
                         if message_content == '':
                             continue
-                        message_author_str = str(message.author)
 
                         green_check_emoji_present_in_message = self.determine_if_green_check_present(message)
                         if green_check_emoji_present_in_message:
                             green_check_emoji_present_in_thread = True
 
-                        if anonymize:
 
-                            if message.author.id == self.bot.user.id:
-                                thread_as_list_of_strings.append(f"{message_author_str} said: '{message_content}'")
-                            else:
-                                thread_as_list_of_strings.append(f"The human said: '{message_content}'")
-
-                        else:
-                            thread_as_list_of_strings.append(f"{message_author_str} said: '{message_content}'")
+                        thread_as_list_of_strings.append(f"{message_author_str} said: '{message_content}'")
 
 
                         message_word_count = len(message_content.split(' '))
@@ -191,6 +189,12 @@ class ThreadScraperCog(commands.Cog):
                             "total_message_count": thread.message_count,
                             "green_check_emoji_present_in_message": green_check_emoji_present_in_message,
                         }
+
+                        if anonymize:
+                            messsage_update_package['author'] = "ANONYMIZED"
+                            messsage_update_package['author_id'] = "ANONYMIZED"
+                            messsage_update_package['user_id'] = "ANONYMIZED"
+
 
                         self.mongo_database_manager.upsert(
                             collection_name=collection_name,

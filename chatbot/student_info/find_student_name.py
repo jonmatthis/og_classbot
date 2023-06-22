@@ -29,7 +29,7 @@ def get_or_create_uuid(student_name:str):
         uuid_map[student_name] = new_uuid
 
         with open(uuid_map_json_path, 'w') as file:
-            json.dump(uuid_map, file)
+            json.dump(uuid_map, file, indent=4)
 
         return new_uuid
 
