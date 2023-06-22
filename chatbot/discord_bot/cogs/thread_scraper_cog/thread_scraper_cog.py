@@ -159,9 +159,15 @@ class ThreadScraperCog(commands.Cog):
                             green_check_emoji_present_in_thread = True
 
                         if anonymize:
-                            thread_as_list_of_strings.append(f"{message_author_str} said: '{message_content}'")
+
+                            if message.author.id == self.bot.user.id:
+                                thread_as_list_of_strings.append(f"{message_author_str} said: '{message_content}'")
+                            else:
+                                thread_as_list_of_strings.append(f"The human said: '{message_content}'")
+
                         else:
-                            thread_as_list_of_strings.append(f"User {student_uuid} said: '{message_content}'")
+                            thread_as_list_of_strings.append(f"{message_author_str} said: '{message_content}'")
+
 
                         message_word_count = len(message_content.split(' '))
                         word_count_for_this_thread_total += message_word_count
