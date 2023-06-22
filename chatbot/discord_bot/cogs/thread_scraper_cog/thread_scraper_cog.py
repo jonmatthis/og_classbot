@@ -183,7 +183,6 @@ class ThreadScraperCog(commands.Cog):
                             'author_id': message.author.id,
                             'user_id': message.author.id,
                             'content': message_content,
-                            'channel': message.channel.name,
                             'jump_url': message.jump_url,
                             'created_at': message.created_at.isoformat(sep='T'),
                             'id': message.id,
