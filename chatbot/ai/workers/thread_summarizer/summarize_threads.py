@@ -1,8 +1,8 @@
 import logging
 from datetime import datetime
 
-from chatbot.bots.workers.thread_summarizer.split_thread_data_into_chunks import split_thread_data_into_chunks
-from chatbot.bots.workers.thread_summarizer.thread_summarizer import logger, ThreadSummarizer
+from chatbot.ai.workers.thread_summarizer.split_thread_data_into_chunks import split_thread_data_into_chunks
+from chatbot.ai.workers.thread_summarizer.thread_summarizer import logger, ThreadSummarizer
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
 from chatbot.student_info.load_student_info import load_student_info
 from chatbot.system.filenames_and_paths import get_thread_backups_collection_name
@@ -11,22 +11,26 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-async def handle_green_check_threads(server_name: str,
-                                     all_thread_collection_name: str = None,
-                                     overwrite: bool = False,
-                                     save_to_json: bool = True,
-                                     collection_name: str = "green_check_messages" ):
+async def summarize_threads(server_name: str,
+                            all_thread_collection_name: str = None,
+                            overwrite: bool = False,
+                            save_to_json: bool = True,
+                            channel_name: str = None, ):
     mongo_database = MongoDatabaseManager()
     if all_thread_collection_name is None:
         all_thread_collection_name = get_thread_backups_collection_name(server_name=server_name)
+    all_thread_collection = mongo_database.get_collection(all_thread_collection_name)
 
-    all_thread_collection_name = mongo_database.get_collection(all_thread_collection_name)
+    student_info = load_student_info()
 
-
-    green_check_threads = list(all_thread_collection_name.find({"green_check_emoji_present": True}))
     logger.info("Generating thread summary")
     total_cost = 0
-    for thread_entry in green_check_threads:
+    for thread_entry in all_thread_collection.find():
+
+        if channel_name is not None and thread_entry["channel"] != channel_name:
+            logger.info(
+                f"Skipping thread: `{thread_entry['thread_title']}` created at {str(thread_entry['created_at'])} because it is not in channel: {channel_name}")
+            continue
 
         print("=====================================================================================================")
         print("=====================================================================================================")
@@ -43,7 +47,9 @@ async def handle_green_check_threads(server_name: str,
 
         thread_chunks = split_thread_data_into_chunks(messages=thread_entry["messages"])
 
-
+        for chunk in thread_chunks:
+            if "PTPRR" in chunk["text"]:
+                f = 9
         try:
             thread_summarizer = ThreadSummarizer(use_anthropic=True)
             thread_summary = await thread_summarizer.summarize(thread_chunks=thread_chunks)
@@ -86,8 +92,11 @@ async def handle_green_check_threads(server_name: str,
 if __name__ == "__main__":
     import asyncio
 
-    asyncio.run(handle_green_check_threads(server_name="Neural Control of Real World Human Movement 2023 Summer1",
-                                           overwrite=True,
-                                           save_to_json=True,
-                                           ))
-
+    asyncio.run(summarize_threads(server_name="Neural Control of Real World Human Movement 2023 Summer1",
+                                  overwrite=True,
+                                  save_to_json=True,
+                                  channel_name="video-chatter-bot"))
+    asyncio.run(summarize_threads(server_name="Neural Control of Real World Human Movement 2023 Summer1",
+                                  overwrite=True,
+                                  save_to_json=True,
+                                  ))

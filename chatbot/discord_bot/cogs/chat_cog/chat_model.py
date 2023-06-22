@@ -5,8 +5,8 @@ from typing import Union, List
 import discord
 from pydantic import BaseModel
 
-from chatbot.bots.assistants.course_assistant.course_assistant import CourseAssistant
-from chatbot.bots.assistants.video_chatter.video_chatter import VideoChatter
+from chatbot.ai.assistants.course_assistant.course_assistant import CourseAssistant
+from chatbot.ai.assistants.video_chatter.video_chatter import VideoChatter
 
 
 class Chat(BaseModel):

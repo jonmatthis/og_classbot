@@ -5,8 +5,8 @@ from datetime import datetime
 
 from langchain.callbacks import get_openai_callback
 
-from chatbot.bots.workers.class_summary_builder.class_summary_builder import ClassSummaryBuilder
-from chatbot.bots.workers.student_summary_builder.student_summary_builder import time_since_last_summary, \
+from chatbot.ai.workers.class_summary_builder.class_summary_builder import ClassSummaryBuilder
+from chatbot.ai.workers.student_summary_builder.student_summary_builder import time_since_last_summary, \
     StudentSummaryBuilder
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
 from chatbot.system.filenames_and_paths import get_thread_backups_collection_name, CLASS_SUMMARY_COLLECTION_NAME, \

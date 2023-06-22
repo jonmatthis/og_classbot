@@ -9,7 +9,7 @@ from langchain.chat_models import ChatOpenAI, ChatAnthropic
 from langchain.memory import ConversationBufferMemory
 from langchain.prompts import HumanMessagePromptTemplate, ChatPromptTemplate, SystemMessagePromptTemplate
 
-from chatbot.bots.workers.video_chatter_summary_builder.video_chatter_summary_builder_prompts import \
+from chatbot.ai.workers.video_chatter_summary_builder.video_chatter_summary_builder_prompts import \
     VIDEO_CHATTER_SUMMARY_RESPONSE_SCHEMA, VIDEO_CHATTER_SCHEMATIZED_SUMMARY_SYSTEM_TEMPLATE, \
     VIDEO_CHATTER_META_SUMMARY_HUMAN_INPUT_PROMPT
 

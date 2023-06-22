@@ -10,7 +10,7 @@ from langchain.chat_models import ChatOpenAI, ChatAnthropic
 from langchain.memory import ConversationBufferMemory
 from langchain.prompts import HumanMessagePromptTemplate, ChatPromptTemplate, SystemMessagePromptTemplate
 
-from chatbot.bots.workers.student_summary_builder.student_summary_builder_prompts import \
+from chatbot.ai.workers.student_summary_builder.student_summary_builder_prompts import \
     STUDENT_SUMMARY_BUILDER_PROMPT_SYSTEM_TEMPLATE, STUDENT_SUMMARY_NEW_SUMMARY_HUMAN_INPUT_PROMPT
 
 MAX_TOKEN_COUNT = 2048

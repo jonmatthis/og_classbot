@@ -4,10 +4,10 @@ from datetime import datetime
 
 import discord
 
-from chatbot.bots.assistants.course_assistant.course_assistant import CourseAssistant
-from chatbot.bots.assistants.course_assistant.prompts.general_course_assistant_prompt import \
+from chatbot.ai.assistants.course_assistant.course_assistant import CourseAssistant
+from chatbot.ai.assistants.course_assistant.prompts.general_course_assistant_prompt import \
     GENERAL_COURSE_ASSISTANT_SYSTEM_TEMPLATE
-from chatbot.bots.assistants.course_assistant.prompts.project_manager_prompt import PROJECT_MANAGER_TASK_PROMPT
+from chatbot.ai.assistants.course_assistant.prompts.project_manager_prompt import PROJECT_MANAGER_TASK_PROMPT
 from chatbot.discord_bot.cogs.chat_cog.chat_model import Chat
 from chatbot.discord_bot.cogs.video_chatter_cog import VIDEO_CHAT_CHANNEL_ID
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager

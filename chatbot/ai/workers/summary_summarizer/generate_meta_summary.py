@@ -4,7 +4,7 @@ from pathlib import Path
 
 from rich.console import Console
 
-from chatbot.bots.workers.summary_summarizer.summary_summarizer import SummarySummarizer
+from chatbot.ai.workers.summary_summarizer.summary_summarizer import SummarySummarizer
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
 
 console = Console()

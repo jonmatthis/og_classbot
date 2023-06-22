@@ -9,12 +9,9 @@ from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.chat_models import ChatOpenAI, ChatAnthropic
 from langchain.memory import ConversationBufferMemory
 from langchain.prompts import HumanMessagePromptTemplate, ChatPromptTemplate, SystemMessagePromptTemplate
-from langchain.schema import AIMessage, HumanMessage
 
-from chatbot.bots.workers.video_chatter_summary_builder.video_chatter_summary_builder_prompts import \
-    VIDEO_CHATTER_META_SUMMARY_HUMAN_INPUT_PROMPT, \
-    VIDEO_CHATTER_FIRST_HUMAN_INPUT_PROMPT, VIDEO_CHATTER_SUMMARY_RESPONSE_SCHEMA, \
-    VIDEO_CHATTER_SCHEMATIZED_SUMMARY_SYSTEM_TEMPLATE, VIDEO_CHATTER_INDIVIDUAL_SUMMARY_HUMAN_INPUT_PROMPT
+from chatbot.ai.workers.class_summary_builder.class_summary_builder_prompts import \
+    CLASS_SUMMARY_BUILDER_PROMPT_SYSTEM_TEMPLATE, CLASS_SUMMARY_NEW_SUMMARY_HUMAN_INPUT_PROMPT
 
 MAX_TOKEN_COUNT = 2048
 DATE_FORMAT = '%Y-%m-%dT%H:%M:%S.%f'
@@ -24,17 +21,12 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 
-class VideoChatterSummaryBuilder:
+class ClassSummaryBuilder:
     def __init__(self,
-                 student_name: str = None,
-                 student_discord_username: str = None,
                  use_anthropic: bool = False,
-                 current_summary: str = None,
                  ):
 
-        self._student_name = student_name
-        self._student_discord_username = student_discord_username
-        self.video_chatter_summary_builder_prompt = self._create_chat_prompt(current_summary=current_summary)
+        self.class_summary_builder_prompt = self._create_chat_prompt()
         self._memory = ConversationBufferMemory()
         if use_anthropic:
             if os.getenv("ANTHROPIC_API_KEY") is None:
@@ -53,42 +45,40 @@ class VideoChatterSummaryBuilder:
             self.dollars_per_token = 0.00003  # gpt-4
 
         self._llm_chain = LLMChain(llm=self.llm,
-                                   prompt=self.video_chatter_summary_builder_prompt,
+                                   prompt=self.class_summary_builder_prompt,
                                    # memory=self._memory,
                                    verbose=True,
                                    )
 
-    def _create_chat_prompt(self, current_summary: str):
+    def _create_chat_prompt(self):
         system_message_prompt = SystemMessagePromptTemplate.from_template(
-            template=VIDEO_CHATTER_SCHEMATIZED_SUMMARY_SYSTEM_TEMPLATE,
-            input_variables=["response_schema"])
-        system_message_prompt.prompt = system_message_prompt.prompt.partial(
-            response_schema=VIDEO_CHATTER_SUMMARY_RESPONSE_SCHEMA, )
+            template=CLASS_SUMMARY_BUILDER_PROMPT_SYSTEM_TEMPLATE,
+            input_variables={"current_summary": ""}
+            )
+        # system_message_prompt.prompt = system_message_prompt.prompt.format(
+        #     current_summary=current_summary
+        # )
 
         human_message_prompt = HumanMessagePromptTemplate.from_template(
-            template=VIDEO_CHATTER_INDIVIDUAL_SUMMARY_HUMAN_INPUT_PROMPT,
-            input_variables=["student_initials",
-                             "new_conversation_summary",
-                             ]
+            template = CLASS_SUMMARY_NEW_SUMMARY_HUMAN_INPUT_PROMPT,
+            input_variables = ["new_student_summary"]
         )
         return ChatPromptTemplate.from_messages(
-            [system_message_prompt,human_message_prompt]
+            [system_message_prompt, human_message_prompt]
         )
 
-    async def update_video_chatter_summary_based_on_new_conversation(self,
-                                                                        student_initials: str,
-                                                                     current_schematized_summary: str,
-                                                                     new_conversation_summary: str,
-                                                                     ) -> str:
+    async def update_class_summary_based_on_new_student_summary(self,
+                                                                current_class_summary: str,
+                                                                new_student_summary: str,
+                                                                ) -> str:
 
         return await self._llm_chain.arun(
-            student_initials=student_initials,
-            new_conversation_summary=new_conversation_summary,
+            current_summary=current_class_summary,
+            new_student_summary=new_student_summary,
         )
 
-
-def time_since_last_summary(video_chatter_summary_entry):
-    previous_summary_datetime = datetime.strptime(video_chatter_summary_entry["video_chatter_summary"]["created_at"],
+def time_since_last_summary(class_summary_entry):
+    previous_summary_datetime = datetime.strptime(class_summary_entry["class_summary"]["created_at"],
                                                   DATE_FORMAT)
     current_time = datetime.now()
     time_since_last_summary = current_time - previous_summary_datetime
@@ -101,3 +91,4 @@ def num_tokens_from_string(string: str, model: str) -> int:
     encoding = tiktoken.encoding_for_model(model)
     num_tokens = len(encoding.encode(string))
     return num_tokens
+

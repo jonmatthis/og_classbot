@@ -6,7 +6,7 @@ from pathlib import Path
 
 from langchain.callbacks import get_openai_callback
 
-from chatbot.bots.workers.video_chatter_summary_builder.video_chatter_summary_builder import VideoChatterSummaryBuilder
+from chatbot.ai.workers.video_chatter_summary_builder.video_chatter_summary_builder import VideoChatterSummaryBuilder
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
 from chatbot.system.filenames_and_paths import get_thread_backups_collection_name, \
     VIDEO_CHATTER_SUMMARIES_COLLECTION_NAME

@@ -1,6 +1,6 @@
 import logging
 import os
-import traceback
+import re
 from datetime import datetime
 
 import discord
@@ -9,14 +9,27 @@ from dotenv import load_dotenv
 
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
 from chatbot.student_info.find_student_name import find_student_info
-from chatbot.student_info.load_student_info import load_student_info, find_student_discord_id, \
-    add_discord_id_if_necessary
+from chatbot.student_info.load_student_info import load_student_info
 from chatbot.system.environment_variables import get_admin_users, is_course_server
-from chatbot.system.filenames_and_paths import get_thread_backups_collection_name, get_default_database_json_save_path
+from chatbot.system.filenames_and_paths import get_thread_backups_collection_name
 
 logger = logging.getLogger(__name__)
 
 logging.getLogger('discord').setLevel(logging.INFO)
+
+
+def anonymize_message(message):
+    if "is the thread owner" in message.content:
+        message.content = ""
+
+    # This regex will match the phrase "my name is" and three words that follow it.
+    # We separate them into two groups using parentheses.
+    pattern = r'(my name is) (\w+ \w+ \w+)'
+    if re.search(pattern, message.content, flags=re.IGNORECASE):
+        # Substitute matched pattern with "my name is REDACTED"
+        message.content = re.sub(pattern, r'\1 REDACTED', message.content, flags=re.IGNORECASE)
+
+    return message
 
 
 class ThreadScraperCog(commands.Cog):
@@ -36,10 +49,15 @@ class ThreadScraperCog(commands.Cog):
                     description="Whether or not to backup the entire server",
                     input_type=bool,
                     default=True)
+    @discord.option(name="anonymize",
+                    description="Whether or not to anonymize the responses",
+                    input_type=bool,
+                    default=False)
     async def scrape_threads(self,
                              ctx: discord.ApplicationContext,
                              timestamp_backup: bool = True,
                              full_server_backup: bool = True,
+                             anonymize: bool = False
                              ):
 
         if is_course_server(ctx.guild.id):
@@ -50,6 +68,8 @@ class ThreadScraperCog(commands.Cog):
         thread_count = 0
 
         collection_name = get_thread_backups_collection_name(server_name=ctx.guild.name)
+        if anonymize:
+            collection_name = "anonymized_" + collection_name
 
         # Make sure we're only responding to the admin users
         if not ctx.user.id in get_admin_users():
@@ -96,28 +116,27 @@ class ThreadScraperCog(commands.Cog):
 
                     thread_owner_username = thread.name.split("'")[0]
 
-
-                    student_discord_username, student_name, student_discord_id = find_student_info(thread_owner_username)
-
-                    if channel.name == "introductions":
-                        print(f"Thread owner username: {thread_owner_username}")
-                        print(f"Student discord username: {student_discord_username}")
-                        print(f"Student name: {student_name}")
-                        print(f"Student discord id: {student_discord_id}")
-                        if thread_count == 24:
-                            f=9
+                    student_discord_username, student_name, student_discord_id, student_uuid = find_student_info(
+                        thread_owner_username)
 
                     mongo_query = {
                         "_student_name": student_name,
                         "_student_username": student_discord_username,
-                        "server_name": ctx.guild.name,
+                        "_student_uuid": student_uuid,
                         "discord_user_id": student_discord_id,
+                        "server_name": ctx.guild.name,
                         "thread_title": thread.name,
                         "thread_id": thread.id,
                         "thread_url": thread.jump_url,
                         "created_at": thread.created_at,
                         "channel": channel.name,
                     }
+
+                    if anonymize:
+                        mongo_query["_student_name"] = "ANONYMIZED"
+                        mongo_query["_student_username"] = "ANONYMIZED"
+                        mongo_query["discord_user_id"] = "ANONYMIZED"
+                        mongo_query["thread_title"] = "ANONYMIZED"
 
                     thread_as_list_of_strings = []
                     word_count_for_this_thread_total = 0
@@ -126,15 +145,24 @@ class ThreadScraperCog(commands.Cog):
                     character_count_for_this_thread_student = 0
                     green_check_emoji_present_in_thread = False
                     async for message in thread.history(limit=None, oldest_first=True):
+
+                        if anonymize:
+                            message = anonymize_message(message)
+
                         message_content = message.content
                         if message_content == '':
                             continue
                         message_author_str = str(message.author)
 
-                        if self.determine_if_green_check_present(message):
+                        green_check_emoji_present_in_message = self.determine_if_green_check_present(message)
+                        if green_check_emoji_present_in_message:
                             green_check_emoji_present_in_thread = True
 
-                        thread_as_list_of_strings.append(f"{message_author_str} said: '{message_content}'")
+                        if anonymize:
+                            thread_as_list_of_strings.append(f"{message_author_str} said: '{message_content}'")
+                        else:
+                            thread_as_list_of_strings.append(f"User {student_uuid} said: '{message_content}'")
+
                         message_word_count = len(message_content.split(' '))
                         word_count_for_this_thread_total += message_word_count
                         message_character_count = len(message_content)
@@ -156,6 +184,7 @@ class ThreadScraperCog(commands.Cog):
                             'reactions': [str(reaction) for reaction in message.reactions],
                             'parent_message_id': message.reference.message_id if message.reference else '',
                             "total_message_count": thread.message_count,
+                            "green_check_emoji_present_in_message": green_check_emoji_present_in_message,
                         }
 
                         self.mongo_database_manager.upsert(
@@ -182,7 +211,7 @@ class ThreadScraperCog(commands.Cog):
             if database_backup_path is None:
                 raise Exception("PATH_TO_COURSE_DATABASE_BACKUPS not set in .env file")
             self.mongo_database_manager.save_json(collection_name=collection_name,
-                                                  save_path = save_path)
+                                                  save_path=save_path)
 
         await status_message.edit(content=f"Finished saving {thread_count} threads")
         print(f"Finished saving {thread_count} threads")
@@ -201,6 +230,5 @@ class ThreadScraperCog(commands.Cog):
         if "Successfully sent summary" in message.content:
             # i forgot that I also put the checkmark on the "Successfully sent summary" message, but those dont count for this purpose
             green_check_emoji_present = False
-
 
         return green_check_emoji_present

@@ -2,7 +2,8 @@ import asyncio
 
 from dotenv import load_dotenv
 
-from chatbot.bots.assistants.video_chatter.prompts.video_chatter_prompt import VIDEO_CHATTER_SYSTEM_TEMPLATE
+from chatbot.ai.assistants.course_assistant.prompts.general_course_assistant_prompt import \
+    GENERAL_COURSE_ASSISTANT_SYSTEM_TEMPLATE
 
 load_dotenv()
 from langchain import LLMChain, OpenAI
@@ -15,11 +16,12 @@ from langchain.prompts import (
 )
 
 
-class VideoChatter:
+class CourseAssistant:
     def __init__(self,
                  temperature=0.8,
                  model_name="gpt-4",
-                 prompt: str = VIDEO_CHATTER_SYSTEM_TEMPLATE,
+                 prompt: str = GENERAL_COURSE_ASSISTANT_SYSTEM_TEMPLATE,
+                 student_summary: str = None,
                  ):
         self._chat_llm = ChatOpenAI(
             streaming=True,
@@ -27,12 +29,14 @@ class VideoChatter:
             temperature=temperature,
             model_name=model_name,
         )
+        if student_summary is None:
+            student_summary = ""
+        self._student_summary = student_summary
 
         self._prompt = self._create_prompt(prompt_template=prompt)
         self._memory = self._configure_memory()
 
         self._chain = self._create_llm_chain()
-
 
     def _configure_memory(self):
 
@@ -51,6 +55,8 @@ class VideoChatter:
         self._system_message_prompt = SystemMessagePromptTemplate.from_template(
             prompt_template
         )
+        self._system_message_prompt.prompt = self._system_message_prompt.prompt.partial(
+            student_summary=self._student_summary)
 
         human_template = "{human_input}"
         human_message_prompt = HumanMessagePromptTemplate.from_template(
@@ -71,6 +77,7 @@ class VideoChatter:
 
     async def demo(self):
         print("Welcome to the Neural Control Assistant demo!")
+        print("You can ask questions or provide input related to the course.")
         print("Type 'exit' to end the demo.\n")
 
         while True:
@@ -95,5 +102,5 @@ class VideoChatter:
 
 
 if __name__ == "__main__":
-    assistant = VideoChatter()
+    assistant = CourseAssistant()
     asyncio.run(assistant.demo())
