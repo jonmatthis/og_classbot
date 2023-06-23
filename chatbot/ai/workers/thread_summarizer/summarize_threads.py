@@ -47,9 +47,6 @@ async def summarize_threads(server_name: str,
 
         thread_chunks = split_thread_data_into_chunks(messages=thread_entry["messages"])
 
-        for chunk in thread_chunks:
-            if "PTPRR" in chunk["text"]:
-                f = 9
         try:
             thread_summarizer = ThreadSummarizer(use_anthropic=True)
             thread_summary = await thread_summarizer.summarize(thread_chunks=thread_chunks)
@@ -92,11 +89,16 @@ async def summarize_threads(server_name: str,
 if __name__ == "__main__":
     import asyncio
 
+    # asyncio.run(summarize_threads(server_name="Neural Control of Real World Human Movement 2023 Summer1",
+    #                               overwrite=True,
+    #                               save_to_json=True,
+    #                               channel_name="video-chatter-bot"))
+    # asyncio.run(summarize_threads(server_name="Neural Control of Real World Human Movement 2023 Summer1",
+    #                               overwrite=True,
+    #                               save_to_json=True,
+    #                               ))
     asyncio.run(summarize_threads(server_name="Neural Control of Real World Human Movement 2023 Summer1",
-                                  overwrite=True,
-                                  save_to_json=True,
-                                  channel_name="video-chatter-bot"))
-    asyncio.run(summarize_threads(server_name="Neural Control of Real World Human Movement 2023 Summer1",
+                                  all_thread_collection_name="anonymized_thread_backups_for_Neural_Control_of_Real_World_Human_Movement_2023_Summer1",
                                   overwrite=True,
                                   save_to_json=True,
                                   ))

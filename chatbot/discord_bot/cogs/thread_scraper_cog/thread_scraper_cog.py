@@ -133,10 +133,10 @@ class ThreadScraperCog(commands.Cog):
                     }
 
                     if anonymize:
-                        mongo_query["_student_name"] = "ANONYMIZED"
-                        mongo_query["_student_username"] = "ANONYMIZED"
-                        mongo_query["discord_user_id"] = "ANONYMIZED"
-                        mongo_query["thread_title"] = "ANONYMIZED"
+                        mongo_query["_student_name"] = "REDACTED"
+                        mongo_query["_student_username"] = "REDACTED"
+                        mongo_query["discord_user_id"] = "REDACTED"
+                        mongo_query["thread_title"] = "REDACTED"
 
                     thread_as_list_of_strings = []
                     word_count_for_this_thread_total = 0
@@ -191,9 +191,9 @@ class ThreadScraperCog(commands.Cog):
                         }
 
                         if anonymize:
-                            messsage_update_package['author'] = "ANONYMIZED"
-                            messsage_update_package['author_id'] = "ANONYMIZED"
-                            messsage_update_package['user_id'] = "ANONYMIZED"
+                            messsage_update_package['author'] = "REDACTED"
+                            messsage_update_package['author_id'] = "REDACTED"
+                            messsage_update_package['user_id'] = "REDACTED"
 
 
                         self.mongo_database_manager.upsert(
