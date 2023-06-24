@@ -7,6 +7,7 @@ import discord
 from discord.ext import commands
 from dotenv import load_dotenv
 
+from chatbot.discord_bot.cogs.thread_scraper_cog.message_anonymizer import anonymize_message
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
 from chatbot.student_info.find_student_name import find_student_info
 from chatbot.student_info.load_student_info import load_student_info
@@ -16,20 +17,6 @@ from chatbot.system.filenames_and_paths import get_thread_backups_collection_nam
 logger = logging.getLogger(__name__)
 
 logging.getLogger('discord').setLevel(logging.INFO)
-
-
-def anonymize_message(message):
-    if "is the thread owner" in message.content:
-        message.content = ""
-
-    # This regex will match the phrase "my name is" and three words that follow it.
-    # We separate them into two groups using parentheses.
-    pattern = r'(my name is) (\w+ \w+ \w+)'
-    if re.search(pattern, message.content, flags=re.IGNORECASE):
-        # Substitute matched pattern with "my name is REDACTED"
-        message.content = re.sub(pattern, r'\1 REDACTED', message.content, flags=re.IGNORECASE)
-
-    return message
 
 
 class ThreadScraperCog(commands.Cog):
