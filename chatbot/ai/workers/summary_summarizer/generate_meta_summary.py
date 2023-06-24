@@ -1,6 +1,7 @@
 import asyncio
 import os
 from pathlib import Path
+from typing import Union
 
 from rich.console import Console
 
@@ -55,11 +56,11 @@ async def generate_meta_summary(mongo_database: MongoDatabaseManager,
                                         f"{thread['summary']['summary']}\n\n")
             thread_summaries = "\n\n".join(thread_summaries)
             to_markdown = markdown_frontmatter + thread_summaries + "\n\n" + "## Schematized student_summary\n\n" + schematized_student_summary + "\n\n"
-            save_to_markdown(text=to_markdown,
-                             subfolder = "student_summaries",
-                             base_summary_name=base_summary_name,
-                             tag=f"_{student_initials}",
-                             )
+            save_video_chatter_summary_to_markdown(text=to_markdown,
+                                                   subfolder = "student_summaries",
+                                                   base_summary_name=base_summary_name,
+                                                   tag=f"_{student_initials}",
+                                                   )
             print(
                 "=====================================================================================================\n")
             print(f"Updating meta summary with summary from: {student_name}\n\n")
@@ -89,17 +90,17 @@ async def generate_meta_summary(mongo_database: MongoDatabaseManager,
             print(f"Updated meta summary:\n\n{meta_summary}\n\n")
 
         if randomize_and_rerun:
-            save_to_markdown(base_summary_name,
-                             meta_summary,
-                             tag=f"_flip_{flip_number}")
+            save_video_chatter_summary_to_markdown(base_summary_name,
+                                                   meta_summary,
+                                                   tag=f"_flip_{flip_number}")
 
-    save_to_markdown(base_summary_name=base_summary_name,
-                     text=meta_summary,
-                     tag="_meta_summary"
-                     )
-    save_to_markdown(text="\n\n".join(all_student_summaries),
-                     base_summary_name=base_summary_name,
-                     tag="_all_summaries")
+    save_video_chatter_summary_to_markdown(base_summary_name=base_summary_name,
+                                           text=meta_summary,
+                                           tag="_meta_summary"
+                                           )
+    save_video_chatter_summary_to_markdown(text="\n\n".join(all_student_summaries),
+                                           base_summary_name=base_summary_name,
+                                           tag="_all_summaries")
 
 
 def format_summary_output(schematized_student_summary):
@@ -117,10 +118,10 @@ def format_summary_output(schematized_student_summary):
     return schematized_student_summary
 
 
-def save_to_markdown(base_summary_name: str,
-                     text, tag: str = None,
-                     subfolder: str = None,
-                     save_path: Path = None):
+def save_video_chatter_summary_to_markdown(base_summary_name: str,
+                                           text, tag: str = None,
+                                           subfolder: str = None,
+                                           save_path: Union[str, Path] = None, ):
     if not save_path:
         save_path = Path(
             os.getenv(
