@@ -19,10 +19,12 @@ anthropic = "^0.2.9"
 langchain = "^0.0.190"
 openai = "^0.27.7"
 Markdown = "^3.4.3"
+pandas = "^2.0.2"
 
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.3.0"
+mongomock = "^4.1.2"
 
 [build-system]
 requires = ["poetry-core"]

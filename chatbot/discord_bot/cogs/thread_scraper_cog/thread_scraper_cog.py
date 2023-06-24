@@ -184,7 +184,7 @@ class ThreadScraperCog(commands.Cog):
 
 
                         self.mongo_database_manager.upsert(
-                            collection_name=collection_name,
+                            collection=collection_name,
                             query=mongo_query,
                             data={"$addToSet": {"messages": messsage_update_package},
                                   "$set": {

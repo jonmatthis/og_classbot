@@ -1,26 +1,34 @@
 import os
+import mongomock
+import pytest
 
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
 
 
-def test_mongodb_manager():
-    mongodb_manager = MongoDatabaseManager(os.getenv('MONGODB_URI'))
+# Set up fixture for MongoDB mock
+@pytest.fixture(scope='function')
+def mock_db_manager():
+    mock_client = mongomock.MongoClient('mongodb://localhost:27017')
+    os.environ['MONGO_URI_LOCAL'] = 'mongodb://localhost:27017'  # set environment variable
+    os.environ['MONGODB_DATABASE_NAME'] = 'test_db'  # set environment variable
+    db_manager = MongoDatabaseManager()
+    db_manager._client = mock_client
+    db_manager._database = mock_client[os.getenv('MONGODB_DATABASE_NAME')]
+    return db_manager
 
-    test_document = {
-        'name': 'Test',
-        'description': 'This is a test document'
-    }
+def test_insert(mock_db_manager):
+    test_document = {'name': 'Test', 'description': 'This is a test document'}
+    result = mock_db_manager.insert('test', test_document)
+    assert result.acknowledged
+    assert result.inserted_id is not None
 
-    # Count the initial number of documents in the 'test' collection
-    initial_count = mongodb_manager.find('test').count()
+def test_upsert(mock_db_manager):
+    test_document = {'name': 'Test', 'description': 'This is a test document'}
+    result = mock_db_manager.upsert('test', {'name': 'Test'}, test_document)
+    assert result.acknowledged
 
-    # Insert the test document into a 'test' collection
-    insert_result = mongodb_manager.insert('test', test_document)
-    assert insert_result.acknowledged == True
-
-    # Retrieve all documents from the 'test' collection
-    find_result = mongodb_manager.find('test')
-
-    # Ensure the number of documents has increased by one
-    final_count = find_result.count()
-    assert final_count == initial_count + 1
+def test_find(mock_db_manager):
+    test_document = {'name': 'Test', 'description': 'This is a test document'}
+    mock_db_manager.insert('test', test_document)
+    result = mock_db_manager.find('test', {'name': 'Test'})
+    assert list(result) == [test_document]
