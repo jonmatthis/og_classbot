@@ -26,7 +26,9 @@ async def summarize_threads(server_name: str,
     logger.info("Generating thread summary")
     total_cost = 0
 
-    async for thread_entry in all_thread_collection.find():
+    all_threads = await all_thread_collection.find().to_list(length=None)
+    number_of_threads = len(all_threads)
+    for thread_number, thread_entry in enumerate(all_threads):
 
         if channel_name is not None and thread_entry["channel"] != channel_name:
             logger.info(
@@ -34,10 +36,11 @@ async def summarize_threads(server_name: str,
             continue
 
         print("=====================================================================================================")
-        print("=====================================================================================================")
         print(
             f"Thread: {thread_entry['thread_title']}, Channel: {thread_entry['channel']}, Created at: {thread_entry['created_at']}")
         print(f"{thread_entry['thread_url']}")
+        print(f"Thread number: {thread_number + 1} of {number_of_threads}")
+        print("=====================================================================================================")
 
         if "summary" in thread_entry and not overwrite:
             logger.info(
@@ -62,7 +65,7 @@ async def summarize_threads(server_name: str,
             thread_cost += chunk["token_count"] * thread_summarizer.dollars_per_token
         total_cost += thread_cost
 
-        mongo_database.upsert(
+        await mongo_database.upsert(
             collection=get_thread_backups_collection_name(server_name=server_name),
             query={"_id": thread_entry["_id"]},
             data={
