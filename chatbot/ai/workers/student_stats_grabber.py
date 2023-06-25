@@ -157,13 +157,13 @@ async def grab_student_statistics(mongo_database: MongoDatabaseManager,
 
         if all_student_statistics[student_name].word_count_student == 0:
             print(f"WARNING: {student_name} has no student messages")
-        mongo_database.upsert(collection_name=STUDENT_STATISTICS_COLLECTION_NAME,
+        mongo_database.upsert(collection=STUDENT_STATISTICS_COLLECTION_NAME,
                               query={"student_name": student_name},
                               data={"$set":  one_student_statistics.dict()})
 
     # Calculate class statistics and save to DB or file
     class_stats = calculate_class_statistics(all_student_statistics)
-    mongo_database.upsert(collection_name=STUDENT_STATISTICS_COLLECTION_NAME,
+    mongo_database.upsert(collection=STUDENT_STATISTICS_COLLECTION_NAME,
                           query={"student_name": "class_statistics"},
                           data={"$set": class_stats.dict()})
 

@@ -41,7 +41,7 @@ async def handle_green_check_threads(overwrite: bool = False,
         parsed_output = "# Citation" + parsed_output
 
         mongo_database.upsert(
-            collection_name=collection_name,
+            collection=collection_name,
             query={"_student_name": entry["_student_name"]},
             data={"$set": {"parsed_output": parsed_output}}
         )

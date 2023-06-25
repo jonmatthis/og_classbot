@@ -164,6 +164,7 @@ class ThreadScraperCog(commands.Cog):
                             character_count_for_this_thread_student += message_character_count
 
                         messsage_update_package = {
+                            'human': message.author.bot == self.bot.user.id,
                             'author': message_author_str,
                             'author_id': message.author.id,
                             'user_id': message.author.id,

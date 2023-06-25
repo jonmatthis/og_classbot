@@ -54,7 +54,7 @@ class ThreadSummarizer:
 
         self.chain = load_summarize_chain(self.llm,
                                           chain_type="refine",
-                                          # verbose=True,
+                                          verbose=True,
                                           question_prompt=self.base_summary_prompt,
                                           # refine_prompt=self.refine_prompt,
                                           return_refine_steps=True,
