@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Union, Any
 
 from dotenv import load_dotenv
-from pymongo import MongoClient
+from motor.motor_asyncio import AsyncIOMotorClient
 
 from chatbot.system.filenames_and_paths import clean_path_string, get_default_database_json_save_path, \
     STUDENT_SUMMARIES_COLLECTION_NAME
@@ -51,7 +51,7 @@ def default_serialize(o: Any) -> str:
 
 class MongoDatabaseManager:
     def __init__(self, ):
-        self._client = MongoClient(get_mongo_uri())
+        self._client = AsyncIOMotorClient(get_mongo_uri())
         self._database = self._client.get_default_database(get_mongo_database_name())
 
     @property
@@ -61,13 +61,13 @@ class MongoDatabaseManager:
     def get_collection(self, collection_name: str):
         return self._database[collection_name]
 
-    def insert(self, collection, document):
-        return self._database[collection].insert_one(document)
+    async def insert(self, collection, document):
+        return await self._database[collection].insert_one(document)
 
-    def upsert(self, collection, query, data):
-        return self._database[collection].update_one(query, data, upsert=True)
+    async def upsert(self, collection, query, data):
+        return await self._database[collection].update_one(query, data, upsert=True)
 
-    def save_json(self,
+    async def save_json(self,
                   collection_name: str,
                   query: dict = None,
                   save_path: Union[str, Path] = None):
@@ -85,7 +85,7 @@ class MongoDatabaseManager:
                                                     timestamp=True)
 
 
-            data = list(collection.find(query))
+            data = [doc async for doc in collection.find(query)]
 
             save_path = str(save_path)
             if save_path[-5:] != ".json":
@@ -103,21 +103,21 @@ class MongoDatabaseManager:
 
         logger.info(f"Saved {len(data)} documents to {save_path}")
 
-    def close(self):
+    async def close(self):
         self._client.close()
 
-    def get_student_summary(self, discord_username: str):
-        student_entry = self._database[STUDENT_SUMMARIES_COLLECTION_NAME].find_one(
+    async def get_student_summary(self, discord_username: str):
+        student_entry = await self._database[STUDENT_SUMMARIES_COLLECTION_NAME].find_one(
             {"discord_username": discord_username})
         if student_entry is None:
             return
 
         return student_entry["student_summary"]["summary"]
 
-
 if __name__ == "__main__":
+    import asyncio
     # Replace 'your_mongodb_uri' with your actual MongoDB URI
-    mongodb_manager = MongoDatabaseManager('mongodb://localhost:27017')  # run locally
+    mongodb_manager = MongoDatabaseManager()  # run locally
 
     test_document = {
         'name': 'Test',
@@ -125,13 +125,16 @@ if __name__ == "__main__":
         'timestamp': datetime.now().isoformat(),
     }
 
-    # Insert the test document into a 'test' collection
-    insert_result = mongodb_manager.insert('test', test_document)
-    print(f'Inserted document with ID: {insert_result.inserted_id}')
+    async def main():
+        # Insert the test document into a 'test' collection
+        insert_result = await mongodb_manager.insert('test', test_document)
+        print(f'Inserted document with ID: {insert_result.inserted_id}')
 
-    # Retrieve all documents from the 'test' collection
-    find_result = mongodb_manager.find('test')
+        # Retrieve all documents from the 'test' collection
+        find_result = [doc async for doc in mongodb_manager.get_collection('test').find()]
 
-    print("Documents in 'test' collection:")
-    for document in find_result:
-        print(document)
+        print("Documents in 'test' collection:")
+        for document in find_result:
+            print(document)
+
+    asyncio.run(main())

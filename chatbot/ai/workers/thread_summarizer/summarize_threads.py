@@ -26,7 +26,7 @@ async def summarize_threads(server_name: str,
     logger.info("Generating thread summary")
     total_cost = 0
 
-    for thread_entry in all_thread_collection.find(no_cursor_timeout=True):
+    async for thread_entry in all_thread_collection.find():
 
         if channel_name is not None and thread_entry["channel"] != channel_name:
             logger.info(
