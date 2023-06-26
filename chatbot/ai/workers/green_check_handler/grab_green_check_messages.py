@@ -1,6 +1,5 @@
 import logging
 
-from chatbot.ai.workers.thread_summarizer.thread_summarizer import logger
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
 from chatbot.system.filenames_and_paths import get_thread_backups_collection_name
 
@@ -17,10 +16,9 @@ async def grab_green_check_messages(server_name: str,
     if all_thread_collection_name is None:
         all_thread_collection_name = get_thread_backups_collection_name(server_name=server_name)
 
-    all_thread_collection_name = mongo_database.get_collection(all_thread_collection_name)
-    all_threads  = list(all_thread_collection_name.find())
+    all_thread_collection = mongo_database.get_collection(all_thread_collection_name)
+    all_threads = await all_thread_collection.find().to_list(length=None)
 
-    logger.info("Generating thread summary")
     total_cost = 0
     for thread_entry in all_threads:
 
@@ -49,7 +47,7 @@ async def grab_green_check_messages(server_name: str,
 
 
     if save_to_json:
-        mongo_database.save_json(collection_name=collection_name)
+        await mongo_database.save_json(collection_name=collection_name)
 
 
 if __name__ == "__main__":
