@@ -6,13 +6,8 @@ from pathlib import Path
 from typing import Union
 
 from dotenv import load_dotenv
-from langchain import OpenAI
-from langchain.agents import create_vectorstore_agent
-from langchain.agents.agent_toolkits import VectorStoreInfo, VectorStoreToolkit
-from langchain.embeddings import OpenAIEmbeddings
 from langchain.indexes import VectorstoreIndexCreator
 from langchain.schema import Document
-from langchain.vectorstores import Chroma
 from rich import print
 
 from chatbot.ai.workers.thread_summarizer.thread_summarizer import logger
@@ -30,30 +25,6 @@ async def create_vector_store(save_to_json: bool = True,
     random.shuffle(all_entries)
     logger.info("Creating vector store from {collection_name} collection with {len(all_entries)} entries")
 
-    documents = paper_summaries_to_documents(all_entries)
-
-    embeddings = OpenAIEmbeddings()
-    chroma_store = Chroma.from_documents(
-        documents=documents,
-        embedding=embeddings,
-        collection_name=collection_name,
-        persist_directory=str(Path(os.getenv("PATH_TO_CHROMA_PERSISTENCE_FOLDER"))/collection_name),
-    )
-
-    vectorstore_info = VectorStoreInfo(
-        name=collection_name,
-        description="Vector store of embeddings of paper summaries",
-        vectorstore=chroma_store,
-    )
-    toolkit = VectorStoreToolkit(vectorstore_info=vectorstore_info)
-    agent_executor = create_vectorstore_agent(llm=OpenAI(),
-                                              toolkit=toolkit,
-                                              verbose=True)
-
-    agent_executor.run("Tell me about the neural control human movement")
-    f=9
-
-def paper_summaries_to_documents(all_entries):
     documents = []
     for entry in all_entries:
         documents.append(Document(page_content=entry["parsed_output_string"],
@@ -61,8 +32,14 @@ def paper_summaries_to_documents(all_entries):
                                             "thread_url": entry["thread_url"],
                                             "source": entry["parsed_output_dict"]["citation"],
                                             **entry["parsed_output_dict"], }))
-    return documents
 
+    index = VectorstoreIndexCreator().from_documents(documents=documents)
+
+    response = index.query_with_sources(
+        "Tell me about the role of eye movements in the neural control of human movement", )
+
+    print(response)
+    f = 9
 
 if __name__ == "__main__":
     import asyncio
