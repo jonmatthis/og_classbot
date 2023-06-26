@@ -24,8 +24,8 @@ class SummarySenderCog(commands.Cog):
         student_discord_username = str(ctx.author)
         logger.info(f"Sending summary for {student_discord_username}...")
         # student_summary = self.mongo_database_manager.get_student_summary(discord_username=student_discord_username)
-        student_summary_collection = self.mongo_database_manager.get_collection(STUDENT_SUMMARIES_COLLECTION_NAME)
-        student_summary_entry = student_summary_collection.find_one({"discord_username": student_discord_username})
+        student_summary_collection = await self.mongo_database_manager.get_collection(STUDENT_SUMMARIES_COLLECTION_NAME)
+        student_summary_entry = await student_summary_collection.find_one({"discord_username": student_discord_username})
         summary_send_message = await ctx.send(
             f"Sending summary for {student_discord_username} as of {datetime.now().isoformat()}...")
 

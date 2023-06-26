@@ -48,7 +48,7 @@ class DiscordBot(discord.Bot):
             channel_name = message.channel.name
             collection_name = f"server_{message.guild.name}_messages"
 
-        self.mongo_database.upsert(
+        await self.mongo_database.upsert(
             collection_name=collection_name,
             query={"server_name": server_name},
             data={"$push": {"messages": {
