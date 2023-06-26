@@ -88,7 +88,7 @@ async def summarize_threads(server_name: str,
 
     print(f"Done summarizing threads!\n\n Total estimated cost (final): ${total_cost:.2f}\n\n")
     if save_to_json:
-        mongo_database.save_json(collection_name=all_thread_collection_name)
+        await mongo_database.save_json(collection_name=all_thread_collection_name)
 
 
 if __name__ == "__main__":
@@ -103,7 +103,7 @@ if __name__ == "__main__":
     #                               save_to_json=True,
     #                               ))
     asyncio.run(summarize_threads(server_name="Neural Control of Real World Human Movement 2023 Summer1",
-                                  all_thread_collection_name="anonymized_thread_backups_for_Neural_Control_of_Real_World_Human_Movement_2023_Summer1",
+                                  all_thread_collection_name="thread_backups_for_Neural_Control_of_Real_World_Human_Movement_2023_Summer1",
                                   overwrite=True,
                                   save_to_json=True,
                                   ))
