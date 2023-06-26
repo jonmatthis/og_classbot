@@ -164,6 +164,7 @@ class ThreadScraperCog(commands.Cog):
                             character_count_for_this_thread_student += message_character_count
 
                         messsage_update_package = {
+                            'human': message.author.bot == self.bot.user.id,
                             'author': message_author_str,
                             'author_id': message.author.id,
                             'user_id': message.author.id,
@@ -184,7 +185,7 @@ class ThreadScraperCog(commands.Cog):
 
 
                         await self.mongo_database_manager.upsert(
-                            collection_name=collection_name,
+                            collection=collection_name,
                             query=mongo_query,
                             data={"$addToSet": {"messages": messsage_update_package},
                                   "$set": {
@@ -206,7 +207,7 @@ class ThreadScraperCog(commands.Cog):
             save_path = os.path.join(database_backup_path, file_name)
             if database_backup_path is None:
                 raise Exception("PATH_TO_COURSE_DATABASE_BACKUPS not set in .env file")
-            self.mongo_database_manager.save_json(collection_name=collection_name,
+            await self.mongo_database_manager.save_json(collection_name=collection_name,
                                                   save_path=save_path)
 
         await status_message.edit(content=f"Finished saving {thread_count} threads")

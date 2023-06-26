@@ -69,7 +69,7 @@ async def generate_video_chatter_summaries(mongo_database: MongoDatabaseManager,
                 }
 
                 thread_as_big_string = "\n".join(thread_entry["thread_as_list_of_strings"])
-                mongo_database.upsert(collection_name=video_chatter_summaries_collection_name,
+                mongo_database.upsert(collection=video_chatter_summaries_collection_name,
                                       query=student_mongo_query,
                                       data={"$set": {"threads": student_threads_in_designated_channel,
                                                      "thread_creation_time": thread_entry["created_at"],
@@ -125,7 +125,7 @@ async def generate_video_chatter_summaries(mongo_database: MongoDatabaseManager,
                 print(f"Updated summary (after update):\n{updated_video_chatter_summary}\n\n---\n\n")
                 print(f"OpenAI API callback:\n {cb}\n")
 
-                mongo_database.upsert(collection_name=video_chatter_summaries_collection_name,
+                mongo_database.upsert(collection=video_chatter_summaries_collection_name,
                                       query=student_mongo_query,
                                       data={"$set": {"video_chatter_summary": {"thread_summary": thread_summary,
                                                                                 "summary": updated_video_chatter_summary,
@@ -134,7 +134,7 @@ async def generate_video_chatter_summaries(mongo_database: MongoDatabaseManager,
                                       )
                 if video_chatter_summary_entry is not None:
                     if "video_chatter_summary" in video_chatter_summary_entry:
-                        mongo_database.upsert(collection_name=video_chatter_summaries_collection_name,
+                        mongo_database.upsert(collection=video_chatter_summaries_collection_name,
                                               query={"_student_username": student_username},
                                               data={"$push": {"previous_summaries": video_chatter_summary_entry[
                                                   "video_chatter_summary"]}}

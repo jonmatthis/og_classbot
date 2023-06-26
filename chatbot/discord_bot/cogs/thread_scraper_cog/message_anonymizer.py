@@ -32,10 +32,7 @@ def redact_introduction(message):
     # The parentheses create groups that can be referenced in the replacement string.
     patterns = [
         r"(my name is) (\w+)",
-        r"(I['`´’]m) (\w+)",
-        r"(I am) (\w+)",
         r"(my name['`´’]s) (\w+)",
-        r"(call me) (\w+)",
     ]
     for pattern in patterns:
         if re.search(pattern, message.content, flags=re.IGNORECASE):

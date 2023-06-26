@@ -82,7 +82,7 @@ async def generate_meta_summary(mongo_database: MongoDatabaseManager,
                 new_conversation_summary=schematized_student_summary,
             )
             meta_summary = format_summary_output(meta_summary)
-            mongo_database.upsert(collection_name="video_chatter_meta_summary",
+            mongo_database.upsert(collection="video_chatter_meta_summary",
                                   query={},
                                   data={"$set": {"meta_summary": meta_summary},
                                         "$push": {"previous_summaries": meta_summary}})

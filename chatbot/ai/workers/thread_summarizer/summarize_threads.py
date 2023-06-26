@@ -25,7 +25,10 @@ async def summarize_threads(server_name: str,
 
     logger.info("Generating thread summary")
     total_cost = 0
-    for thread_entry in all_thread_collection.find():
+
+    all_threads = await all_thread_collection.find().to_list(length=None)
+    number_of_threads = len(all_threads)
+    for thread_number, thread_entry in enumerate(all_threads):
 
         if channel_name is not None and thread_entry["channel"] != channel_name:
             logger.info(
@@ -33,10 +36,11 @@ async def summarize_threads(server_name: str,
             continue
 
         print("=====================================================================================================")
-        print("=====================================================================================================")
         print(
             f"Thread: {thread_entry['thread_title']}, Channel: {thread_entry['channel']}, Created at: {thread_entry['created_at']}")
         print(f"{thread_entry['thread_url']}")
+        print(f"Thread number: {thread_number + 1} of {number_of_threads}")
+        print("=====================================================================================================")
 
         if "summary" in thread_entry and not overwrite:
             logger.info(
@@ -45,7 +49,7 @@ async def summarize_threads(server_name: str,
 
         logger.info(f"Summarizing: `{thread_entry['thread_title']}` created at {str(thread_entry['created_at'])}")
 
-        thread_chunks = split_thread_data_into_chunks(messages=thread_entry["messages"])
+        thread_chunks = split_thread_data_into_chunks(messages=thread_entry["thread_as_list_of_strings"])
 
         try:
             thread_summarizer = ThreadSummarizer(use_anthropic=True)
@@ -61,8 +65,8 @@ async def summarize_threads(server_name: str,
             thread_cost += chunk["token_count"] * thread_summarizer.dollars_per_token
         total_cost += thread_cost
 
-        mongo_database.upsert(
-            collection_name=get_thread_backups_collection_name(server_name=server_name),
+        await mongo_database.upsert(
+            collection=get_thread_backups_collection_name(server_name=server_name),
             query={"_id": thread_entry["_id"]},
             data={
                 "$set": {
@@ -81,9 +85,10 @@ async def summarize_threads(server_name: str,
               f"Total cost (so far): ${total_cost:.5f}\n"
               f"----------------------------\n")
 
+
     print(f"Done summarizing threads!\n\n Total estimated cost (final): ${total_cost:.2f}\n\n")
     if save_to_json:
-        mongo_database.save_json(collection_name=all_thread_collection_name)
+        await mongo_database.save_json(collection_name=all_thread_collection_name)
 
 
 if __name__ == "__main__":
@@ -98,7 +103,7 @@ if __name__ == "__main__":
     #                               save_to_json=True,
     #                               ))
     asyncio.run(summarize_threads(server_name="Neural Control of Real World Human Movement 2023 Summer1",
-                                  all_thread_collection_name="anonymized_thread_backups_for_Neural_Control_of_Real_World_Human_Movement_2023_Summer1",
+                                  all_thread_collection_name="thread_backups_for_Neural_Control_of_Real_World_Human_Movement_2023_Summer1",
                                   overwrite=True,
                                   save_to_json=True,
                                   ))

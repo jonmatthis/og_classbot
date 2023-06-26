@@ -33,7 +33,7 @@ async def generate_student_summaries(mongo_database: MongoDatabaseManager,
             student_threads = [thread for thread in
                                thread_collection.find({'thread_owner_name': student_username})]
 
-            mongo_database.upsert(collection_name=student_summaries_collection_name,
+            mongo_database.upsert(collection=student_summaries_collection_name,
                                   query={"discord_username": student_username},
                                   data={"$set": {"threads": student_threads}})
 
@@ -77,7 +77,7 @@ async def generate_student_summaries(mongo_database: MongoDatabaseManager,
                 print(f"Updated summary (after update):\n{updated_student_summary}\n\n---\n\n")
                 print(f"OpenAI API callback:\n {cb}\n")
 
-                mongo_database.upsert(collection_name=student_summaries_collection_name,
+                mongo_database.upsert(collection=student_summaries_collection_name,
                                       query={"discord_username": student_username},
                                       data={"$set": {"student_summary": {"summary": updated_student_summary,
                                                                          "created_at": datetime.now().isoformat(),
@@ -85,7 +85,7 @@ async def generate_student_summaries(mongo_database: MongoDatabaseManager,
                                       )
                 if student_summary_entry is not None:
                     if "student_summary" in student_summary_entry:
-                        mongo_database.upsert(collection_name=student_summaries_collection_name,
+                        mongo_database.upsert(collection=student_summaries_collection_name,
                                               query={"discord_username": student_username},
                                               data={"$push": {"previous_summaries": student_summary_entry[
                                                   "student_summary"]}}

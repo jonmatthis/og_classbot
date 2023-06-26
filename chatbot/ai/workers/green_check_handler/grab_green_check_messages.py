@@ -38,8 +38,8 @@ async def grab_green_check_messages(server_name: str,
             if message["green_check_emoji_present_in_message"]:
                 messages_with_green_check.append(message["content"])
 
-                await mongo_database.upsert(
-                    collection_name=collection_name,
+                mongo_database.upsert(
+                    collection=collection_name,
                     query={"_student_name": thread_entry["_student_name"]},
                     data={"$addToSet": {"thread_id": thread_entry["thread_id"],
                                         "green_check_messages": message["content"]}}
@@ -49,7 +49,7 @@ async def grab_green_check_messages(server_name: str,
 
 
     if save_to_json:
-        await mongo_database.save_json(collection_name=collection_name)
+        mongo_database.save_json(collection_name=collection_name)
 
 
 if __name__ == "__main__":

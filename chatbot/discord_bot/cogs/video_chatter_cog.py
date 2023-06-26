@@ -58,13 +58,15 @@ class VideoChatterCog(discord.Cog):
         if message.author.id == self._discord_bot.user.id:
             return
 
+        # Only respond to messages in threads
+        if not message.channel.__class__ == discord.Thread:
+            return
+
         if not message.channel.parent_id in self._allowed_channels:
             logger.info(f"You can only talk with the VideoChatter in the video chat channel!")
             return
 
-        # Only respond to messages in threads
-        if not message.channel.__class__ == discord.Thread:
-            return
+
         thread = message.channel
         # Only respond to messages in threads owned by the bot
         if not thread.owner_id == self._discord_bot.user.id:
