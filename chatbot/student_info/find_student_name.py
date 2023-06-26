@@ -38,7 +38,6 @@ def get_or_create_uuid(student_name:str):
 def find_student_info(thread_owner_username):
     student_name = None
     student_discord_username = None
-    student_discord_id = None
     student_info = load_student_info()
 
 
@@ -52,7 +51,6 @@ def find_student_info(thread_owner_username):
                     discord_username_to_check.lower() in thread_owner_username.lower():
                 student_name = student_key
                 student_discord_username = student_dict['discord_username']
-                student_discord_id = student_dict['discord_user_id']
                 break
 
 
@@ -66,13 +64,12 @@ def find_student_info(thread_owner_username):
                 student_name = "Andrea"
             student_name += "_NOT_A_STUDENT"
             student_discord_username = thread_owner_username
-            student_discord_id = '000'
         else:
             raise ValueError(f"Could not find a student with the discord username {thread_owner_username}")
 
     uuid = get_or_create_uuid(student_name)
 
-    return student_discord_username, student_name, student_discord_id, uuid
+    return student_discord_username, student_name, uuid
 
 
 def find_user_names_to_check(student_dict):

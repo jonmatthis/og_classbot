@@ -30,6 +30,12 @@ async def grab_green_check_messages(server_name: str,
         print(
             f"Thread: {thread_entry['thread_title']}, Channel: {thread_entry['channel']}, Created at: {thread_entry['created_at']}")
         print(f"{thread_entry['thread_url']}")
+        query = {"_student_name": thread_entry["_student_name"],
+                 "_student_discord_name": thread_entry["_student_username"],
+                 "_student_uuid": thread_entry["_student_uuid"],
+                 "thread_id": int(thread_entry["thread_id"]),
+                 "thread_url": thread_entry["thread_url"],
+                 "channel": thread_entry["channel"], }
 
         messages_with_green_check = []
         for message in thread_entry["messages"]:
@@ -38,13 +44,11 @@ async def grab_green_check_messages(server_name: str,
 
                 await mongo_database.upsert(
                     collection=collection_name,
-                    query={"_student_name": thread_entry["_student_name"]},
-                    data={"$addToSet": {"thread_id": thread_entry["thread_id"],
-                                        "green_check_messages": message["content"]}}
+                    query=query,
+                    data={"$addToSet": {"green_check_messages": message["content"]}}
                 )
         print(f"Student: {thread_entry['_student_name']}: \n"
               f"Messages with green check: {messages_with_green_check}")
-
 
     if save_to_json:
         await mongo_database.save_json(collection_name=collection_name)

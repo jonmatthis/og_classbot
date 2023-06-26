@@ -103,14 +103,13 @@ class ThreadScraperCog(commands.Cog):
 
                     thread_owner_username = thread.name.split("'")[0]
 
-                    student_discord_username, student_name, student_discord_id, student_uuid = find_student_info(
+                    student_discord_username, student_name, student_uuid = find_student_info(
                         thread_owner_username)
 
                     mongo_query = {
                         "_student_name": student_name,
                         "_student_username": student_discord_username,
                         "_student_uuid": student_uuid,
-                        "discord_user_id": student_discord_id,
                         "server_name": ctx.guild.name,
                         "thread_title": thread.name,
                         "thread_id": thread.id,

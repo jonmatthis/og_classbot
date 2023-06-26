@@ -10,13 +10,14 @@ from dotenv import load_dotenv
 from pydantic import BaseModel
 
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
+from chatbot.student_info.load_student_info import load_student_info
 from chatbot.system.filenames_and_paths import get_thread_backups_collection_name, STUDENT_STATISTICS_COLLECTION_NAME, \
     clean_path_string
-from chatbot.student_info.load_student_info import load_student_info
 
 load_dotenv()
 
 logger = logging.getLogger(__name__)
+
 
 class ClassStatistics(BaseModel):
     number_of_students: int = 0
@@ -37,8 +38,6 @@ class ClassStatistics(BaseModel):
 
 
 class StudentStatistics(BaseModel):
-
-
     number_of_threads: int = 0
     number_of_messages_total: int = 0
     number_of_messages_student: int = 0
@@ -56,6 +55,7 @@ class StudentStatistics(BaseModel):
     threads_in_bot_playground: int = 0
 
     threads_with_green_check_emoji: int = 0
+
 
 def calculate_student_statistics(student_threads):
     statistics = StudentStatistics()
@@ -112,7 +112,6 @@ def calculate_class_statistics(all_student_statistics: Dict[str, StudentStatisti
     return class_statistics
 
 
-
 def _increment_channel_thread_count(statistics: StudentStatistics, channel_name: str):
     if channel_name == "introductions":
         statistics.threads_in_introductions += 1
@@ -147,28 +146,24 @@ async def grab_student_statistics(mongo_database: MongoDatabaseManager,
               f"Student#{student_number + 1} of {number_of_students}\n"
               f"-----------------------------------------------------------------------------\n")
 
-        student_threads = [thread for thread in
-                           thread_collection.find({'_student_name': student_name})]
-
-
+        student_threads = await  thread_collection.find({'_student_name': student_name}).to_list(length=None)
 
         one_student_statistics = calculate_student_statistics(student_threads)
         all_student_statistics[student_name] = one_student_statistics
 
         if all_student_statistics[student_name].word_count_student == 0:
             print(f"WARNING: {student_name} has no student messages")
-        mongo_database.upsert(collection=STUDENT_STATISTICS_COLLECTION_NAME,
-                              query={"student_name": student_name},
-                              data={"$set":  one_student_statistics.dict()})
+        await mongo_database.upsert(collection=STUDENT_STATISTICS_COLLECTION_NAME,
+                                    query={"student_name": student_name},
+                                    data={"$set": one_student_statistics.dict()})
 
     # Calculate class statistics and save to DB or file
     class_stats = calculate_class_statistics(all_student_statistics)
-    mongo_database.upsert(collection=STUDENT_STATISTICS_COLLECTION_NAME,
-                          query={"student_name": "class_statistics"},
-                          data={"$set": class_stats.dict()})
+    await mongo_database.upsert(collection=STUDENT_STATISTICS_COLLECTION_NAME,
+                                query={"student_name": "class_statistics"},
+                                data={"$set": class_stats.dict()})
 
-    mongo_database.save_json(collection_name=STUDENT_STATISTICS_COLLECTION_NAME)
-
+    await mongo_database.save_json(collection_name=STUDENT_STATISTICS_COLLECTION_NAME)
 
     save_to_csv(all_student_statistics)
 

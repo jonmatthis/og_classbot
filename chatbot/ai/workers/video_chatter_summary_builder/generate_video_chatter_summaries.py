@@ -56,25 +56,23 @@ async def generate_video_chatter_summaries(mongo_database: MongoDatabaseManager,
                 student_discord_username = thread_entry["_student_username"]
                 student_name = thread_entry["_student_name"]
                 student_initials = "".join([name[0].upper() for name in student_name.split(" ")])
-                student_discord_id = thread_entry["discord_user_id"]
                 thread_channel_name = thread_entry["channel"]
                 server_name = thread_entry["server_name"]
 
                 student_mongo_query = {
                     "_student_name": student_name,
                     "_student_username": student_discord_username,
-                    "_student_discord_id": student_discord_id,
                     "channel": thread_channel_name,
                     "server_name": server_name,
                 }
 
                 thread_as_big_string = "\n".join(thread_entry["thread_as_list_of_strings"])
-                mongo_database.upsert(collection=video_chatter_summaries_collection_name,
+                await mongo_database.upsert(collection=video_chatter_summaries_collection_name,
                                       query=student_mongo_query,
                                       data={"$set": {"threads": student_threads_in_designated_channel,
                                                      "thread_creation_time": thread_entry["created_at"],
                                                      },
-                                            "$addToSet": {"thread_as_big_string": student_discord_id,}
+                                            "$addToSet": {"thread_as_big_string": thread_as_big_string,}
                                             },
                                       )
 
