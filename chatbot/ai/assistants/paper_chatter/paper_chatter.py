@@ -1,16 +1,19 @@
 import asyncio
+import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 from langchain.embeddings import OpenAIEmbeddings
-from langchain.vectorstores import faiss
+from langchain.schema import Document
+from langchain.vectorstores import Chroma
 
-from chatbot.ai.assistants.video_chatter.prompts.video_chatter_prompt import VIDEO_CHATTER_SYSTEM_TEMPLATE
+from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
 
 load_dotenv()
-from langchain import LLMChain, OpenAI, FAISS, InMemoryDocstore
+from langchain import LLMChain, OpenAI
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.chat_models import ChatOpenAI
-from langchain.memory import ConversationSummaryBufferMemory, VectorStoreRetrieverMemory
+from langchain.memory import ConversationSummaryBufferMemory, VectorStoreRetrieverMemory, CombinedMemory
 from langchain.prompts import (
     HumanMessagePromptTemplate,
     ChatPromptTemplate, SystemMessagePromptTemplate,
@@ -40,41 +43,97 @@ PAPER_CHATTER_SYSTEM_TEMPLATE = """
             - You speak in a casual and friendly manner.
             - Use your own words and be yourself!
             
-            
             ----
-            
-            ----
-            Current Chat History: 
-            {chat_history}
-            """
+             Here is the current conversation history: 
 
+             ``` 
+             {chat_memory} 
+             ```
+
+
+            
+            Here are some relevant papers that  you know about:
+            ```
+            {vectorstore_memory}
+            ```
+            """
 
 class PaperChatter:
     def __init__(self,
-                 temperature=0.8,
-                 model_name="gpt-4",
-                 prompt: str = PAPER_CHATTER_SYSTEM_TEMPLATE,
-                 ):
-        self._chat_llm = ChatOpenAI(
+                 chat_llm,
+                 prompt,
+                 memory,):
+        self._chat_llm = chat_llm
+        self._prompt = prompt
+        self._memory = memory
+        self._chain = self._create_llm_chain()
+
+    @classmethod
+    async def create(cls,
+                     temperature=0.8,
+                     model_name="gpt-4",
+                     prompt_template=PAPER_CHATTER_SYSTEM_TEMPLATE):
+        chat_llm = ChatOpenAI(
             streaming=True,
             callbacks=[StreamingStdOutCallbackHandler()],
             temperature=temperature,
             model_name=model_name,
         )
 
-        self._prompt = self._create_prompt(prompt_template=prompt)
-        self._memory = self._configure_memory()
+        prompt = cls._create_prompt(prompt_template=prompt_template)
+        memory = await cls._configure_memory(cls)
 
-        self._chain = self._create_llm_chain()
+        return cls(chat_llm, prompt, memory)
 
 
-    def _configure_memory(self):
-        embedding_size = 1536  # Dimensions of the OpenAIEmbeddings
-        index = faiss.IndexFlatL2(embedding_size)
-        embedding_fn = OpenAIEmbeddings().embed_query
-        vectorstore = FAISS(embedding_fn, index, InMemoryDocstore({}), {})
-        retriever = vectorstore.as_retriever(search_kwargs=dict(k=1))
-        memory = VectorStoreRetrieverMemory(retriever=retriever)
+
+    async def _configure_memory(self):
+        conversation_memory = self._configure_conversation_memory(self)
+        vectorstore_memory = await self._configure_vectorstore_memory(self)
+        combined_memory = CombinedMemory(memories=[conversation_memory,
+                                                   vectorstore_memory])
+        return combined_memory
+
+    async def _configure_vectorstore_memory(self):
+        collection_name = "green_check_messages"
+
+        mongo_database = MongoDatabaseManager()
+
+        collection = mongo_database.get_collection(collection_name)
+        all_entries = await collection.find().to_list(length=None)
+
+
+        print("Creating vector store from {collection_name} collection with {len(all_entries)} entries")
+
+        documents = []
+        for entry in all_entries:
+            documents.append(Document(page_content=entry["parsed_output_string"],
+                                      metadata={"_student_uuid": entry["_student_uuid"],
+                                                "thread_url": entry["thread_url"],
+                                                "source": entry["parsed_output_dict"]["citation"],
+                                                **entry["parsed_output_dict"], }))
+
+        embeddings = OpenAIEmbeddings()
+        chroma_vector_store = Chroma.from_documents(
+                documents=documents,
+                embedding=embeddings,
+                collection_name=collection_name,
+                persist_directory=str(Path(os.getenv("PATH_TO_CHROMA_PERSISTENCE_FOLDER")) / collection_name),
+            )
+
+        retriever = chroma_vector_store.as_retriever(search_kwargs=dict(k=3))
+
+        return VectorStoreRetrieverMemory(retriever=retriever,
+                                          memory_key="vectorstore_memory",
+                                          input_key="human_input",)
+
+
+
+    def _configure_conversation_memory(self):
+        return ConversationSummaryBufferMemory(memory_key="chat_memory",
+                                               input_key="human_input",
+                                               llm=OpenAI(temperature=0),
+                                               max_token_limit=1000)
 
     def _create_llm_chain(self):
         return LLMChain(llm=self._chat_llm,
@@ -83,8 +142,8 @@ class PaperChatter:
                         verbose=True,
                         )
 
-    def _create_prompt(self, prompt_template: str):
-        self._system_message_prompt = SystemMessagePromptTemplate.from_template(
+    def _create_prompt(prompt_template: str):
+        system_message_prompt = SystemMessagePromptTemplate.from_template(
             prompt_template
         )
 
@@ -94,7 +153,7 @@ class PaperChatter:
         )
 
         chat_prompt = ChatPromptTemplate.from_messages(
-            [self._system_message_prompt, human_message_prompt]
+            [system_message_prompt, human_message_prompt]
         )
 
         return chat_prompt
@@ -131,5 +190,9 @@ class PaperChatter:
 
 
 if __name__ == "__main__":
-    assistant = PaperChatter()
-    asyncio.run(assistant.demo())
+    async def main():
+        paper_chatter = await PaperChatter.create()
+        await paper_chatter.demo()
+
+
+    asyncio.run(main())

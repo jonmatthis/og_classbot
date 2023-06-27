@@ -48,7 +48,7 @@ class DiscordBot(discord.Bot):
             channel_name = message.channel.name
             collection_name = f"server_{message.guild.name}_messages"
 
-        self.mongo_database.upsert(
+        await self.mongo_database.upsert(
             collection=collection_name,
             query={"server_name": server_name},
             data={"$push": {"messages": {
@@ -76,14 +76,19 @@ class DiscordBot(discord.Bot):
 async def main():
     mongo_database_manager = MongoDatabaseManager()
     discord_bot = DiscordBot(mongo_database=mongo_database_manager)
+
     discord_bot.add_cog(ChatCog(bot=discord_bot,
                                 mongo_database_manager=mongo_database_manager))
+
     discord_bot.add_cog(ThreadScraperCog(bot=discord_bot,
                                          mongo_database_manager=mongo_database_manager))
+
     discord_bot.add_cog(SummarySenderCog(bot=discord_bot,
                                          mongo_database_manager=mongo_database_manager))
+
     discord_bot.add_cog(VideoChatterCog(bot=discord_bot,
                                         mongo_database_manager=mongo_database_manager))
+
     await discord_bot.start(os.getenv("DISCORD_TOKEN"))
 
 

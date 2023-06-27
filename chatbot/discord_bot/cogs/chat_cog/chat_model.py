@@ -16,7 +16,6 @@ class Chat(BaseModel):
 
     started_at: str = datetime.now().isoformat()
     chat_id: str = uuid.uuid4()
-    messages: List = []
 
     class Config:
         arbitrary_types_allowed = True
