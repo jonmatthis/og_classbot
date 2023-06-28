@@ -39,6 +39,7 @@ class DiscordBot(discord.Bot):
     @discord.Cog.listener()
     async def on_message(self, message):
         logger.info(f"Received message: {message.content}")
+        print(f"Received message: {message.content}")
         if message.guild is None:
             server_name = 'DM-with-' + str(message.author)
             channel_name = 'DM-with-' + str(message.author)
