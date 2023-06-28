@@ -11,7 +11,7 @@ from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, Field, root_validator
 
-from chatbot.ai.workers.thread_summarizer.thread_summarizer import logger
+from chatbot.ai.workers.green_check_handler.grab_green_check_messages import grab_green_check_messages
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
 
 logging.basicConfig(level=logging.INFO)
@@ -20,32 +20,40 @@ logger = logging.getLogger(__name__)
 
 class PaperSummary(BaseModel):
     title: str = Field("", description="The title of the research article")
-    short_title: str = Field("", description="A 6-8 word summary of the research article (lower case)")
     author_year: str = Field("", description="The author and year of the research article (e.g. 'Smith et al. 2020')")
     citation: str = Field("", description="The citation to the research article")
     abstract: str = Field("", description="A copy-paste of the abstract of the research article")
-    summary: str = Field("", description="A summary/overview of the major points of the paper in a bullet-point markdown format")
+    detailed_summary: str = Field("", description="A detailed summary/overview of the major points of the paper in a bulleted outline format")
+    short_summary: str = Field("", description="A short (2-3 sentence) summary of the paper")
+    very_short_summary: str = Field("", description="A very short one sentence summary of the research article")
+    extremely_short_summary: str = Field("", description="An extremely short 6-10 word summary of the research article")
+    basic_methodology: str = Field("", description="A basic description of the methodology used in the research article")
     tags: str = Field("", description="A list of tags formatted using #kebab-case-lowercase")
+    summary_title: str = Field("", description="A summary title made by combining the `author_year` field with the `extremely_short_summary` field, like this: ['author_year'] - ['extremely_short_summary']")
 
-    @root_validator
-    def create_summary_title(cls):
-        cls.summary_title = f"{cls.author_year}_{cls.short_title}"
 
     def __str__(self):
         tags = "\n".join(self.tags.split(" "))
-
         return f"""
-# {self.author_year} - {self.short_title}\n
+# {self.summary_title}\n
 ## Title\n
 {self.title}\n\n
 ## Citation:\n
 {self.citation}\n\n
 ## Abstract\n
 {self.abstract}\n\n
-## Summary/overview\n
-{self.summary}\n\n
+## Basic Methodology\n
+{self.basic_methodology}\n\n
+## Detailed Summary\n
+{self.detailed_summary}\n\n
+## Short Summary\n
+{self.short_summary}\n\n
+## Very Short Summary\n
+{self.very_short_summary}\n\n
+## Extremely Short Summary\n
+{self.extremely_short_summary}\n\n
 ## Tags\n
-{self.tags}
+{tags}
 """
 
 class GreenCheckMessageParser:
@@ -61,7 +69,15 @@ class GreenCheckMessageParser:
         self._parser = PydanticOutputParser(pydantic_object=PaperSummary)
 
         self._prompt_template = PromptTemplate(
-            template="Use these instructions to convert the input text into a paper summary:\n {format_instructions} \n\nInput text: \n___\n{input_text}\n\n___\nDO NOT MAKE ANYTHING UP. ONLY USE TEXT FROM THE INPUT TEXT. IF YOU DO NOT HAVE ENOUGH INFORMATION TO FILL OUT A FIELD SAY 'COULD NOT FIND IN INPUT TEXT'",
+            template="Use these instructions to convert the input text into a paper summary:\n "
+                     "{format_instructions} \n\n"
+                     "Input text: \n"
+                     "___\n"
+                     "{input_text}\n\n"
+                     "___\n"
+                     "DO NOT MAKE ANYTHING UP. ONLY USE TEXT FROM THE INPUT TEXT. \n"
+                     "IF YOU DO NOT HAVE ENOUGH INFORMATION TO FILL OUT A FIELD SAY 'COULD NOT FIND IN INPUT TEXT'",
+
             input_variables=["input_text"],
             partial_variables={"format_instructions": self._parser.get_format_instructions()}
         )
@@ -142,7 +158,7 @@ def save_green_check_entry_to_markdown(base_summary_name: str,
 
     save_path.mkdir(parents=True, exist_ok=True)
 
-    clean_file_name = file_name.replace(":", "_").replace(".", "_")
+    clean_file_name = file_name.replace(":", "_").replace(".", "_").replace(" ", "_")
     clean_file_name += ".md"
 
     save_path = save_path / clean_file_name
@@ -155,6 +171,10 @@ def save_green_check_entry_to_markdown(base_summary_name: str,
 
 if __name__ == "__main__":
     import asyncio
+    asyncio.run(grab_green_check_messages(server_name="Neural Control of Real World Human Movement 2023 Summer1",
+                                          overwrite=True,
+                                          save_to_json=True,
+                                          ))
 
     asyncio.run(parse_green_check_messages(collection_name="green_check_messages",
                                            overwrite=True,

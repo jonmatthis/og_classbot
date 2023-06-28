@@ -59,7 +59,9 @@ def get_default_database_json_save_path(filename: str,
     return str(save_path)
 
 
-def get_thread_backups_collection_name(server_name: str, channel_name: str = None):
+def get_thread_backups_collection_name(server_name: str=None, channel_name: str = None):
+    if server_name is None:
+        server_name = "Neural Control of Real World Human Movement 2023 Summer1"
     server_name = server_name.replace(" ", "_")
 
     if channel_name is not None:
