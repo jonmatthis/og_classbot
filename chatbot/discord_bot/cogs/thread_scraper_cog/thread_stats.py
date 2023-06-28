@@ -1,25 +1,19 @@
 import discord
-from datetime import datetime
 
 
 class ThreadStats:
     def __init__(self, bot_id: int):
         self.bot_id = bot_id
-        self.thread_as_list_of_strings = []
-        self.green_check_emoji_present_in_thread = False
 
-        self.word_count_for_this_thread_total = 0
-        self.character_count_for_this_thread_total = 0
-        self.word_count_cumulative_total = []
+        self.stats = {
+            "green_check_emoji_present": False,
+            "thread_as_list_of_strings": [],
+            "thread_as_one_string": "",
 
-
-        self.character_count_for_this_thread_student = 0
-        self.word_count_for_this_thread_student = 0
-        self.word_count_cumulative_student = []
-
-        self.character_count_for_this_thread_bot = 0
-        self.word_count_for_this_thread_bot = 0
-        self.word_count_cumulative_bot = []
+            "word_count_for_this_thread": {"total": 0, "student": 0, "bot": 0},
+            "character_count_for_this_thread": {"total": 0, "student": 0, "bot": 0},
+            "word_count_cumulative": {"total": [], "student": [], "bot": []}
+        }
 
     def update(self, message: discord.Message):
         is_bot_user = message.author.id == self.bot_id
@@ -31,26 +25,25 @@ class ThreadStats:
 
         green_check_emoji_present_in_message = self.determine_if_green_check_present(message)
         if green_check_emoji_present_in_message:
-            self.green_check_emoji_present_in_thread = True
+            self.stats["green_check_emoji_present"] = True
 
-        self.thread_as_list_of_strings.append(f"{message_author_str} said: '{message_content}'")
+        self.stats["thread_as_list_of_strings"].append(f"{message_author_str} said: '{message_content}'")
 
         message_word_count = len(message_content.split(' '))
         message_character_count = len(message_content)
 
-        self.word_count_for_this_thread_total += message_word_count
-        self.character_count_for_this_thread_total += message_character_count
-        self.word_count_cumulative_total.append([message.created_at, self.word_count_for_this_thread_total])
+        self.stats["word_count_for_this_thread"]["total"] += message_word_count
+        self.stats["character_count_for_this_thread"]["total"] += message_character_count
+        self.stats["word_count_cumulative"]["total"].append([message.created_at, self.stats["word_count_for_this_thread"]["total"]])
 
         if not is_bot_user:
-            self.word_count_for_this_thread_student += message_word_count
-            self.character_count_for_this_thread_student += message_character_count
-            self.word_count_cumulative_student.append([message.created_at, self.word_count_for_this_thread_student])
+            self.stats["word_count_for_this_thread"]["student"] += message_word_count
+            self.stats["character_count_for_this_thread"]["student"] += message_character_count
+            self.stats["word_count_cumulative"]["student"].append([message.created_at, self.stats["word_count_for_this_thread"]["student"]])
         else:
-            self.word_count_for_this_thread_bot += message_word_count
-            self.character_count_for_this_thread_bot += message_character_count
-            self.word_count_cumulative_bot.append([message.created_at, self.word_count_for_this_thread_bot])
-
+            self.stats["word_count_for_this_thread"]["bot"] += message_word_count
+            self.stats["character_count_for_this_thread"]["bot"] += message_character_count
+            self.stats["word_count_cumulative"]["bot"].append([message.created_at, self.stats["word_count_for_this_thread"]["bot"]])
 
     def determine_if_green_check_present(self, message: discord.Message):
         reactions = message.reactions
@@ -68,14 +61,5 @@ class ThreadStats:
         return green_check_emoji_present
 
     def to_dict(self):
-        return {
-            "thread_as_list_of_strings": self.thread_as_list_of_strings,
-            "thread_as_one_string": "\n".join(self.thread_as_list_of_strings),
-            "total_word_count_for_this_thread": self.word_count_for_this_thread_total,
-            "word_count_for_this_thread_student": self.word_count_for_this_thread_student,
-            "total_character_count_for_this_thread": self.character_count_for_this_thread_total,
-            "character_count_for_this_thread_student": self.character_count_for_this_thread_student,
-            "green_check_emoji_present": self.green_check_emoji_present_in_thread,
-            "cumulative_word_count_total": self.word_count_cumulative_total,
-            "cumulative_word_count_student": self.word_count_cumulative_student,
-        }
+        self.stats["thread_as_one_string"] = "\n".join(self.stats["thread_as_list_of_strings"])
+        return self.stats
