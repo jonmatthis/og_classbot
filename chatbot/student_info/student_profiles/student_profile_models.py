@@ -1,6 +1,6 @@
 from copy import deepcopy
 from datetime import datetime
-from typing import Dict, List, Tuple, Any, Union
+from typing import Dict, List, Any, Tuple, Union
 
 from pydantic import BaseModel, Field
 
@@ -17,10 +17,10 @@ class StudentProfile(BaseModel):
         default_factory=lambda: {"total": 0, "student": 0, "bot": 0})
     total_character_count_for_all_threads: Dict[str, int] = Field(
         default_factory=lambda: {"total": 0, "student": 0, "bot": 0})
-    word_count_timelines: Dict[str, List[List[datetime], int]] = Field(default_factory=dict,
-                                                                        description="A dictionary of lists of [datetime, cumulative_word_count] pairs for each entry in the count_types list")
+    word_count_timelines: Dict[str, List[Dict[str,Union[datetime, int ]]]] = Field(default_factory=dict,
+                                                                       description="A dictionary of lists of [datetime, cumulative_word_count] pairs for each entry in the count_types list")
 
-    def update(self, thread: Dict[str, Any] ):
+    def update(self, thread: Dict[str, Any]):
 
         thread_stats = ThreadStats(**thread["thread_statistics"])
         self.threads.append(thread)
@@ -28,7 +28,8 @@ class StudentProfile(BaseModel):
         # Update counts and timelines
         for count_type in ['total', 'student', 'bot']:
             self.total_word_count_for_all_threads[count_type] += thread_stats.word_count_for_this_thread[count_type]
-            self.total_character_count_for_all_threads[count_type] += thread_stats.character_count_for_this_thread[count_type]
+            self.total_character_count_for_all_threads[count_type] += thread_stats.character_count_for_this_thread[
+                count_type]
 
             if thread["_student_initials"] == "AC":
                 f = 9
@@ -44,16 +45,12 @@ class StudentProfile(BaseModel):
             updated_single_thread_timeline = deepcopy(original_single_thread_timeline)
 
             for index, time_point in enumerate(original_single_thread_timeline):
-                updated_single_thread_timeline[index] =  [datetime.fromisoformat(time_point[0]),
-                                                          time_point[1] + last_cumulative_count,
-                                                          thread["thread_id"]]
+                updated_single_thread_timeline[index] = {"message_created_at":time_point[0],
+                                                         "cumulative_word_count":time_point[1] + last_cumulative_count,
+                                                         "thread_id":thread["thread_id"]}
 
             self.word_count_timelines[count_type].extend(updated_single_thread_timeline)
 
+            self.word_count_timelines[count_type].sort(key=lambda x: x["message_created_at"])
 
-        # Sort timelines by datetime
-        for count_type in ['total', 'student', 'bot']:
-            self.word_count_timelines[count_type].sort(key=lambda x: x[0])
-
-
-        f=9
+        f = 9

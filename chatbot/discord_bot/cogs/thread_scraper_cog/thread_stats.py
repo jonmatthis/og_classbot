@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List, Dict, Tuple
 
 from discord import Message
@@ -11,7 +12,7 @@ class ThreadStats(BaseModel):
     word_count_for_this_thread: Dict[str, int] = Field(default_factory=lambda: {"total": 0, "student": 0, "bot": 0})
     character_count_for_this_thread: Dict[str, int] = Field(
         default_factory=lambda: {"total": 0, "student": 0, "bot": 0})
-    word_count_cumulative: Dict[str, List[Tuple[str, int]]] = Field(
+    word_count_cumulative: Dict[str, List[Tuple[datetime, int]]] = Field(
         default_factory=lambda: {"total": [], "student": [], "bot": []})
     thread_as_one_string: str = Field(default="")
 
@@ -39,18 +40,18 @@ class ThreadStats(BaseModel):
         self.word_count_for_this_thread["total"] += message_word_count
         self.character_count_for_this_thread["total"] += message_character_count
         self.word_count_cumulative["total"].append(
-            (message.created_at.isoformat(), self.word_count_for_this_thread["total"]))
+            (message.created_at, self.word_count_for_this_thread["total"]))
 
         if not is_bot_user:
             self.word_count_for_this_thread["student"] += message_word_count
             self.character_count_for_this_thread["student"] += message_character_count
             self.word_count_cumulative["student"].append(
-                (message.created_at.isoformat(), self.word_count_for_this_thread["student"]))
+                (message.created_at, self.word_count_for_this_thread["student"]))
         else:
             self.word_count_for_this_thread["bot"] += message_word_count
             self.character_count_for_this_thread["bot"] += message_character_count
             self.word_count_cumulative["bot"].append(
-                (message.created_at.isoformat(), self.word_count_for_this_thread["bot"]))
+                (message.created_at, self.word_count_for_this_thread["bot"]))
 
     def determine_if_green_check_present(self, message: Message) -> bool:
         reactions = message.reactions

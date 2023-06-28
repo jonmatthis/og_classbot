@@ -120,7 +120,7 @@ class ThreadScraperCog(commands.Cog):
                         'user_id': message.author.id,
                         'content': message_content,
                         'jump_url': message.jump_url,
-                        'created_at': message.created_at.isoformat(sep='T'),
+                        'created_at': message.created_at,
                         'id': message.id,
                         'reactions': [str(reaction) for reaction in message.reactions],
                         'parent_message_id': message.reference.message_id if message.reference else '',

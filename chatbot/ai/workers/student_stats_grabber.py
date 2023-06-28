@@ -64,7 +64,7 @@ def calculate_student_statistics(student_threads):
     for thread in student_threads:
         statistics = _increment_channel_thread_count(statistics, thread["channel"])
 
-        if thread["green_check_emoji_present"]:
+        if thread["thread_statistics"]["green_check_emoji_present"]:
             statistics.threads_with_green_check_emoji += 1
 
         statistics.number_of_messages_total += len(thread["messages"])
