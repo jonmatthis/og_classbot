@@ -87,7 +87,7 @@ class Quine:
 
 if __name__ == "__main__":
 
-    base_directory_in = r"C:\Users\jonma\github_repos\freemocap_organization\freemocap\freemocap\data_saver"
+    base_directory_in = r"C:\Users\jonma\github_repos\jonmatthis\chatbot\chatbot\student_info\student_profiles"
     quine = Quine(
         base_directory=base_directory_in,
         excluded_directories=["__pycache__",

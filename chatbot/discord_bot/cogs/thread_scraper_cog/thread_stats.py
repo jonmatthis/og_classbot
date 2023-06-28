@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 
 
 class ThreadStats(BaseModel):
-    bot_id: int
+    bot_id: int = None
     green_check_emoji_present: bool = False
     thread_as_list_of_strings: List[str] = Field(default_factory=list)
     word_count_for_this_thread: Dict[str, int] = Field(default_factory=lambda: {"total": 0, "student": 0, "bot": 0})

@@ -108,6 +108,7 @@ class ChatCog(discord.Cog):
         if message.author.id == self._discord_bot.user.id:
             return
 
+
         if message.channel.parent_id == VIDEO_CHAT_CHANNEL_ID:
             return
 
