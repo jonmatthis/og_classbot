@@ -3,8 +3,10 @@ import os
 from pathlib import Path
 from typing import Union, List
 
+import chromadb
 import numpy as np
 import plotly.graph_objects as go
+from chromadb.config import Settings
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.schema import Document
 from langchain.vectorstores import Chroma
@@ -16,12 +18,13 @@ from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
 from chatbot.system.filenames_and_paths import get_thread_backups_collection_name
 
 
-async def create_student_message_vector_store(collection_name: str = get_thread_backups_collection_name()):
+async def get_or_create_student_message_vector_store(thread_collection_name: str = get_thread_backups_collection_name()):
+
     mongo_database = MongoDatabaseManager()
-    collection = mongo_database.get_collection(collection_name)
+    collection = mongo_database.get_collection(thread_collection_name)
     all_thread_entries = await collection.find().to_list(length=None)
 
-    print(f"Creating document list from {collection_name} collection with {len(all_thread_entries)} entries")
+    print(f"Creating document list from {thread_collection_name} collection with {len(all_thread_entries)} entries")
 
     student_vector_stores = {}
     student_documents = {}
@@ -52,14 +55,19 @@ async def create_student_message_vector_store(collection_name: str = get_thread_
           "------------------------------------\n")
 
     for student_name, student_message_documents in student_documents.items():
+        vectorstore_collection_name = "student_vector_store"
         print(f"Creating vector store from {student_name} collection with {len(student_message_documents)} entries")
         embeddings_model = OpenAIEmbeddings()
+        persistence_directory = str(Path(os.getenv("PATH_TO_CHROMA_PERSISTENCE_FOLDER")) / vectorstore_collection_name)
         student_vector_stores[student_name] = Chroma.from_documents(
             documents=student_message_documents,
             embedding=embeddings_model,
-            collection_name="student_message_vector_store",
-            persist_directory=str(Path(os.getenv("PATH_TO_CHROMA_PERSISTENCE_FOLDER")) / "student_message_vector_store")
+            collection_name=vectorstore_collection_name,
+            persist_directory=persistence_directory,
         )
+    await mongo_database.upsert(collection=vectorstore_collection_name,
+                                query={},
+                                data={"$set": {"student_vector_stores": student_vector_stores}}, )
 
     return student_vector_stores
 
@@ -98,7 +106,7 @@ def visualize_clusters(embeddings: Union[List[List[float]], np.ndarray],
                        labels: List[str], n_clusters: int):
     tsne = TSNE(n_components=2,
                 random_state=42,
-                perplexity=5)
+                perplexity=25)
 
     if embeddings.__class__ == list:
         embeddings = np.array(embeddings)
@@ -119,13 +127,28 @@ def visualize_clusters(embeddings: Union[List[List[float]], np.ndarray],
                       '#e377c2',
                       '#7f7f7f',
                       '#bcbd22',
-                      '#17becf']  # colors for up to 10 clusters
+                      '#17becf',
+                      '#aec7e8',
+                      '#ffbb78',
+                      '#98df8a',
+                      '#ff9896',
+                      '#c5b0d5',
+                      '#c49c94',
+                      '#f7b6d2', ]
 
     for cluster in range(n_clusters):
         cluster_indices = np.where(kmeans_labels == cluster)
         x = embeddings_2d[cluster_indices, 0].ravel()
         y = embeddings_2d[cluster_indices, 1].ravel()
 
+        if len(x) >= 3:  # Convex hull needs at least 3 points
+            hull = ConvexHull(np.column_stack([x, y]))
+            for simplex in hull.simplices:
+                data.append(go.Scatter(x=x[simplex],
+                                       y=y[simplex],
+                                       mode='lines',
+                                       line=dict(color=cluster_colors[cluster]),
+                                       hoverinfo='skip'))
         data.append(go.Scatter(x=x,
                                y=y,
                                mode='markers',
@@ -136,15 +159,6 @@ def visualize_clusters(embeddings: Union[List[List[float]], np.ndarray],
                                hoverinfo='text',
                                name=f'Cluster {cluster}'))
 
-        if len(x) >= 3:  # Convex hull needs at least 3 points
-            hull = ConvexHull(np.column_stack([x, y]))
-            for simplex in hull.simplices:
-                data.append(go.Scatter(x=x[simplex],
-                                       y=y[simplex],
-                                       mode='lines',
-                                       line=dict(color=cluster_colors[cluster]),
-                                       hoverinfo='skip'))
-
     layout = go.Layout(title='t-SNE Visualization of Vectorstore Clustering with KMeans',
                        xaxis=dict(title='Dimension 1'),
                        yaxis=dict(title='Dimension 2'),
@@ -154,14 +168,21 @@ def visualize_clusters(embeddings: Union[List[List[float]], np.ndarray],
     fig.show()
 
 
+def split_string(s, length, splitter: str = "<br>") -> str:
+    return splitter.join(s[i:i + length] for i in range(0, len(s), length))
+
+
 async def main():
     # vector_store = await create_green_check_vector_store()
-    vector_stores = await create_student_message_vector_store()
+    vector_stores = await get_or_create_student_message_vector_store()
+    embeddings = []
+    labels = []
     for student_name, vector_store in vector_stores.items():
         collection = vector_store._collection.get(include=["embeddings", "documents", "metadatas"])
-        embeddings = collection["embeddings"]
-        labels = [document for document in collection["documents"]]
-        visualize_clusters(embeddings=embeddings, labels=labels, n_clusters=4)
+        embeddings.extend(collection["embeddings"])
+        labels.extend([split_string(document, 30) for document in collection["documents"]])
+
+    visualize_clusters(embeddings=embeddings, labels=labels, n_clusters=12)
 
 
 if __name__ == "__main__":
