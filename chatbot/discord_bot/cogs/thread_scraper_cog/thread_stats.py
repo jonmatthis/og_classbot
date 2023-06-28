@@ -1,21 +1,24 @@
-import discord
+from typing import List, Dict, Tuple
+
+from discord import Message
+from pydantic import BaseModel, Field
 
 
-class ThreadStats:
-    def __init__(self, bot_id: int):
-        self.bot_id = bot_id
+class ThreadStats(BaseModel):
+    bot_id: int
+    green_check_emoji_present: bool = False
+    thread_as_list_of_strings: List[str] = Field(default_factory=list)
+    word_count_for_this_thread: Dict[str, int] = Field(default_factory=lambda: {"total": 0, "student": 0, "bot": 0})
+    character_count_for_this_thread: Dict[str, int] = Field(
+        default_factory=lambda: {"total": 0, "student": 0, "bot": 0})
+    word_count_cumulative: Dict[str, List[Tuple[str, int]]] = Field(
+        default_factory=lambda: {"total": [], "student": [], "bot": []})
+    thread_as_one_string: str = Field(default="")
 
-        self.stats = {
-            "green_check_emoji_present": False,
-            "thread_as_list_of_strings": [],
-            "thread_as_one_string": "",
+    class Config:
+        orm_mode = True
 
-            "word_count_for_this_thread": {"total": 0, "student": 0, "bot": 0},
-            "character_count_for_this_thread": {"total": 0, "student": 0, "bot": 0},
-            "word_count_cumulative": {"total": [], "student": [], "bot": []}
-        }
-
-    def update(self, message: discord.Message):
+    def update(self, message: Message):
         is_bot_user = message.author.id == self.bot_id
         message_author_str = str(message.author)
 
@@ -25,27 +28,31 @@ class ThreadStats:
 
         green_check_emoji_present_in_message = self.determine_if_green_check_present(message)
         if green_check_emoji_present_in_message:
-            self.stats["green_check_emoji_present"] = True
+            self.green_check_emoji_present = True
 
-        self.stats["thread_as_list_of_strings"].append(f"{message_author_str} said: '{message_content}'")
+        self.thread_as_list_of_strings.append(f"{message_author_str} said: '{message_content}'")
+        self.thread_as_one_string = "\n".join(self.thread_as_list_of_strings)
 
         message_word_count = len(message_content.split(' '))
         message_character_count = len(message_content)
 
-        self.stats["word_count_for_this_thread"]["total"] += message_word_count
-        self.stats["character_count_for_this_thread"]["total"] += message_character_count
-        self.stats["word_count_cumulative"]["total"].append([message.created_at, self.stats["word_count_for_this_thread"]["total"]])
+        self.word_count_for_this_thread["total"] += message_word_count
+        self.character_count_for_this_thread["total"] += message_character_count
+        self.word_count_cumulative["total"].append(
+            (message.created_at.isoformat(), self.word_count_for_this_thread["total"]))
 
         if not is_bot_user:
-            self.stats["word_count_for_this_thread"]["student"] += message_word_count
-            self.stats["character_count_for_this_thread"]["student"] += message_character_count
-            self.stats["word_count_cumulative"]["student"].append([message.created_at, self.stats["word_count_for_this_thread"]["student"]])
+            self.word_count_for_this_thread["student"] += message_word_count
+            self.character_count_for_this_thread["student"] += message_character_count
+            self.word_count_cumulative["student"].append(
+                (message.created_at.isoformat(), self.word_count_for_this_thread["student"]))
         else:
-            self.stats["word_count_for_this_thread"]["bot"] += message_word_count
-            self.stats["character_count_for_this_thread"]["bot"] += message_character_count
-            self.stats["word_count_cumulative"]["bot"].append([message.created_at, self.stats["word_count_for_this_thread"]["bot"]])
+            self.word_count_for_this_thread["bot"] += message_word_count
+            self.character_count_for_this_thread["bot"] += message_character_count
+            self.word_count_cumulative["bot"].append(
+                (message.created_at.isoformat(), self.word_count_for_this_thread["bot"]))
 
-    def determine_if_green_check_present(self, message: discord.Message):
+    def determine_if_green_check_present(self, message: Message) -> bool:
         reactions = message.reactions
         green_check_emoji_present = False
 
@@ -59,7 +66,3 @@ class ThreadStats:
             green_check_emoji_present = False
 
         return green_check_emoji_present
-
-    def to_dict(self):
-        self.stats["thread_as_one_string"] = "\n".join(self.stats["thread_as_list_of_strings"])
-        return self.stats

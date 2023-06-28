@@ -132,13 +132,13 @@ class ThreadScraperCog(commands.Cog):
                     anonymized_message_update_package['user_id'] = "REDACTED"
                     anonymized_message_update_package['content'] = anonymize_message(message).content
 
-                    thread_stats_dict = thread_stats.to_dict()
+                    thread_stats_dict = thread_stats.dict()
                     thread_as_list_of_strings = deepcopy(thread_stats_dict['thread_as_list_of_strings'])
                     thread_as_one_string = deepcopy(thread_stats_dict['thread_as_one_string'])
                     del thread_stats_dict['thread_as_list_of_strings']
                     del thread_stats_dict['thread_as_one_string']
 
-                    anonymized_thread_stats_dict = anonymized_thread_stats.to_dict()
+                    anonymized_thread_stats_dict = anonymized_thread_stats.dict()
                     anonymized_thread_as_list_of_strings = deepcopy(
                         anonymized_thread_stats_dict['thread_as_list_of_strings'])
                     anonymized_thread_as_one_string = deepcopy(anonymized_thread_stats_dict['thread_as_one_string'])
