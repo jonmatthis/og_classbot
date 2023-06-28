@@ -58,6 +58,7 @@ class MongoDatabaseManager:
     def chat_history_collection(self):
         return self._database[get_mongo_chat_history_collection_name()]
 
+
     def get_collection(self, collection_name: str):
         return self._database[collection_name]
 

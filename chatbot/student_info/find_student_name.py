@@ -78,3 +78,8 @@ def find_user_names_to_check(student_dict):
         discord_usernames_to_check.extend(student_dict['other_discord_usernames'].split(','))
         discord_usernames_to_check = [discord_username.strip() for discord_username in discord_usernames_to_check]
     return discord_usernames_to_check
+
+
+def get_initials(name:str):
+    student_initials = "".join([name[0].upper() for name in name.split(" ")])
+    return student_initials

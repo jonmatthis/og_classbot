@@ -10,7 +10,7 @@ from discord.ext import commands
 from chatbot.discord_bot.cogs.thread_scraper_cog.message_anonymizer import anonymize_message
 from chatbot.discord_bot.cogs.thread_scraper_cog.thread_stats import ThreadStats
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
-from chatbot.student_info.find_student_name import find_student_info
+from chatbot.student_info.find_student_name import find_student_info, get_initials
 from chatbot.student_info.load_student_info import load_student_info
 from chatbot.system.environment_variables import get_admin_users
 from chatbot.system.filenames_and_paths import get_thread_backups_collection_name
@@ -90,6 +90,7 @@ class ThreadScraperCog(commands.Cog):
                     "_student_name": student_name,
                     "_student_username": student_discord_username,
                     "_student_uuid": student_uuid,
+                    "_student_initials": get_initials(name=student_name),
                     "server_name": ctx.guild.name,
                     "thread_title": thread.name,
                     "thread_id": thread.id,

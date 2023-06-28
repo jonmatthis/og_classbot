@@ -6,15 +6,20 @@ class ThreadStats:
     def __init__(self, bot_id: int):
         self.bot_id = bot_id
         self.thread_as_list_of_strings = []
-        self.word_count_for_this_thread_total = 0
-        self.word_count_for_this_thread_student = 0
-        self.character_count_for_this_thread_total = 0
-        self.character_count_for_this_thread_student = 0
         self.green_check_emoji_present_in_thread = False
 
-        # Add the new cumulative word count lists
+        self.word_count_for_this_thread_total = 0
+        self.character_count_for_this_thread_total = 0
         self.word_count_cumulative_total = []
+
+
+        self.character_count_for_this_thread_student = 0
+        self.word_count_for_this_thread_student = 0
         self.word_count_cumulative_student = []
+
+        self.character_count_for_this_thread_bot = 0
+        self.word_count_for_this_thread_bot = 0
+        self.word_count_cumulative_bot = []
 
     def update(self, message: discord.Message):
         is_bot_user = message.author.id == self.bot_id
@@ -31,18 +36,21 @@ class ThreadStats:
         self.thread_as_list_of_strings.append(f"{message_author_str} said: '{message_content}'")
 
         message_word_count = len(message_content.split(' '))
-        self.word_count_for_this_thread_total += message_word_count
         message_character_count = len(message_content)
-        self.character_count_for_this_thread_total += message_character_count
 
-        # Update the total word count list
+        self.word_count_for_this_thread_total += message_word_count
+        self.character_count_for_this_thread_total += message_character_count
         self.word_count_cumulative_total.append([message.created_at, self.word_count_for_this_thread_total])
 
         if not is_bot_user:
             self.word_count_for_this_thread_student += message_word_count
             self.character_count_for_this_thread_student += message_character_count
-            # Update the student word count list
             self.word_count_cumulative_student.append([message.created_at, self.word_count_for_this_thread_student])
+        else:
+            self.word_count_for_this_thread_bot += message_word_count
+            self.character_count_for_this_thread_bot += message_character_count
+            self.word_count_cumulative_bot.append([message.created_at, self.word_count_for_this_thread_bot])
+
 
     def determine_if_green_check_present(self, message: discord.Message):
         reactions = message.reactions

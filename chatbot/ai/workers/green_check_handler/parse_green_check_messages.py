@@ -9,10 +9,11 @@ from dotenv import load_dotenv
 from langchain import PromptTemplate, OpenAI
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.output_parsers import PydanticOutputParser
-from pydantic import BaseModel, Field, root_validator
+from pydantic import BaseModel, Field
 
 from chatbot.ai.workers.green_check_handler.grab_green_check_messages import grab_green_check_messages
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
+from chatbot.student_info.find_student_name import get_initials
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -128,7 +129,7 @@ async def parse_green_check_messages(overwrite: bool = False,
                            "messages": messages,
                            }}
         )
-        student_initials = "".join([name[0].upper() for name in entry["_student_name"].split(" ")])
+        student_initials = get_initials(entry["_student_name"])
 
         save_green_check_entry_to_markdown(base_summary_name="green_check_messages",
                                            text=str(parsed_output),
