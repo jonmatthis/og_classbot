@@ -1,18 +1,18 @@
 import logging
 import os
-import re
 from copy import deepcopy
 from datetime import datetime
 
 import discord
+from discord import Forbidden
 from discord.ext import commands
-from dotenv import load_dotenv
 
 from chatbot.discord_bot.cogs.thread_scraper_cog.message_anonymizer import anonymize_message
+from chatbot.discord_bot.cogs.thread_scraper_cog.thread_stats import ThreadStats
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
 from chatbot.student_info.find_student_name import find_student_info
 from chatbot.student_info.load_student_info import load_student_info
-from chatbot.system.environment_variables import get_admin_users, is_course_server
+from chatbot.system.environment_variables import get_admin_users
 from chatbot.system.filenames_and_paths import get_thread_backups_collection_name
 
 logger = logging.getLogger(__name__)
@@ -69,6 +69,8 @@ class ThreadScraperCog(commands.Cog):
 
             thread_count_per_channel[channel.name] = 0
             for thread in threads:  # Loop through each thread
+                thread_stats = ThreadStats(bot_id=self.bot.user.id)
+                anonymized_thread_stats = ThreadStats(bot_id=self.bot.user.id)
 
                 total_thread_count += 1
                 thread_count_per_channel[channel.name] += 1
@@ -79,19 +81,15 @@ class ThreadScraperCog(commands.Cog):
                 status_message = await self.send_status_message_update(ctx, saving_thread_string, status_message)
 
                 thread_owner_username = thread.name.split("'")[0]
-                thread_owner_discord_id = await self.get_discord_id_from_init_message(thread)
-                student_discord_username,\
-                    student_name,\
+                student_discord_username, \
+                    student_name, \
                     student_uuid = find_student_info(
                     thread_owner_username)
-
-
 
                 mongo_query = {
                     "_student_name": student_name,
                     "_student_username": student_discord_username,
                     "_student_uuid": student_uuid,
-                    "discord_user_id": thread_owner_discord_id,
                     "server_name": ctx.guild.name,
                     "thread_title": thread.name,
                     "thread_id": thread.id,
@@ -103,42 +101,18 @@ class ThreadScraperCog(commands.Cog):
                 anonymized_mongo_query = deepcopy(mongo_query)
                 anonymized_mongo_query["_student_name"] = "REDACTED"
                 anonymized_mongo_query["_student_username"] = "REDACTED"
-                anonymized_mongo_query["discord_user_id"] = "REDACTED"
                 anonymized_mongo_query["thread_title"] = "REDACTED"
 
-                thread_as_list_of_strings = []
-                word_count_for_this_thread_total = 0
-                word_count_for_this_thread_student = 0
-                character_count_for_this_thread_total = 0
-                character_count_for_this_thread_student = 0
-                green_check_emoji_present_in_thread = False
                 async for message in thread.history(limit=None, oldest_first=True):
-
+                    thread_stats.update(message)
+                    anonymized_thread_stats.update(anonymize_message(message))
                     message_author_str = str(message.author)
-
 
                     message_content = message.content
                     if message_content == '':
                         continue
 
-                    green_check_emoji_present_in_message = self.determine_if_green_check_present(message)
-                    if green_check_emoji_present_in_message:
-                        green_check_emoji_present_in_thread = True
-
-
-                    thread_as_list_of_strings.append(f"{message_author_str} said: '{message_content}'")
-
-
-                    message_word_count = len(message_content.split(' '))
-                    word_count_for_this_thread_total += message_word_count
-                    message_character_count = len(message_content)
-                    character_count_for_this_thread_total += message_character_count
-
-                    if message.author.id != self.bot.user.id:
-                        word_count_for_this_thread_student += message_word_count
-                        character_count_for_this_thread_student += message_character_count
-
-                    messsage_update_package = {
+                    message_update_package = {
                         'human': message.author.bot == self.bot.user.id,
                         'author': message_author_str,
                         'author_id': message.author.id,
@@ -149,66 +123,58 @@ class ThreadScraperCog(commands.Cog):
                         'id': message.id,
                         'reactions': [str(reaction) for reaction in message.reactions],
                         'parent_message_id': message.reference.message_id if message.reference else '',
-                        "total_message_count": thread.message_count,
-                        "green_check_emoji_present_in_message": green_check_emoji_present_in_message,
                     }
 
-
-                    anonymized_message_update_package = deepcopy(messsage_update_package)
+                    anonymized_message_update_package = deepcopy(message_update_package)
                     anonymized_message_update_package['author'] = "REDACTED"
                     anonymized_message_update_package['author_id'] = "REDACTED"
                     anonymized_message_update_package['user_id'] = "REDACTED"
                     anonymized_message_update_package['content'] = anonymize_message(message).content
 
-                    thread_stats_package ={
-                        "thread_as_list_of_strings": thread_as_list_of_strings,
-                        "thread_as_one_string": "\n".join(thread_as_list_of_strings),
-                        "total_word_count_for_this_thread": word_count_for_this_thread_total,
-                        "word_count_for_this_thread_student": word_count_for_this_thread_student,
-                        "total_character_count_for_this_thread": character_count_for_this_thread_total,
-                        "character_count_for_this_thread_student": character_count_for_this_thread_student,
-                        'mongo_entry_updated': datetime.now(),
-                        "green_check_emoji_present": green_check_emoji_present_in_thread,
-                    }
+                    thread_stats_dict = thread_stats.to_dict()
+                    thread_as_list_of_strings = deepcopy(thread_stats_dict['thread_as_list_of_strings'])
+                    thread_as_one_string = deepcopy(thread_stats_dict['thread_as_one_string'])
+                    del thread_stats_dict['thread_as_list_of_strings']
+                    del thread_stats_dict['thread_as_one_string']
+
+                    anonymized_thread_stats_dict = anonymized_thread_stats.to_dict()
+                    anonymized_thread_as_list_of_strings = deepcopy(
+                        anonymized_thread_stats_dict['thread_as_list_of_strings'])
+                    anonymized_thread_as_one_string = deepcopy(anonymized_thread_stats_dict['thread_as_one_string'])
+                    del anonymized_thread_stats_dict['thread_as_list_of_strings']
+                    del anonymized_thread_stats_dict['thread_as_one_string']
 
                     await self.mongo_database_manager.upsert(
                         collection=collection_name,
                         query=mongo_query,
-                        data={"$addToSet": {"messages": messsage_update_package},
-                              "$set": thread_stats_package,
+                        data={"$addToSet": {"messages": message_update_package},
+                              "$set": {"thread_as_list_of_strings": thread_as_list_of_strings,
+                                       "thread_as_one_string": thread_as_one_string,
+                                       "thread_statistics": thread_stats_dict,
+                                       }
                               }
                     )
-        if timestamp_backup:
-            load_dotenv()
-            file_name = f"{ctx.guild.name}_thread_backup_{datetime.now().isoformat(sep='_')}.json"
-            database_backup_path = os.getenv("PATH_TO_COURSE_DATABASE_BACKUPS")
-            save_path = os.path.join(database_backup_path, file_name)
-            if database_backup_path is None:
-                raise Exception("PATH_TO_COURSE_DATABASE_BACKUPS not set in .env file")
-            await self.mongo_database_manager.save_json(collection_name=collection_name,
-                                                  save_path=save_path)
+                    await self.mongo_database_manager.upsert(
+                        collection=anonymized_collection_name,
+                        query=anonymized_mongo_query,
+                        data={"$addToSet": {"messages": anonymized_message_update_package},
+                              "$set": {"thread_as_list_of_strings": anonymized_thread_as_list_of_strings,
+                                       "thread_as_one_string": anonymized_thread_as_one_string,
+                                       "thread_statistics": anonymized_thread_stats_dict,
+                                       }
+                              }
+                    )
+
+        file_name = f"{ctx.guild.name}_thread_backup_{datetime.now().isoformat(sep='_')}.json"
+        database_backup_path = os.getenv("PATH_TO_COURSE_DATABASE_BACKUPS")
+        if database_backup_path is None:
+            raise Exception("PATH_TO_COURSE_DATABASE_BACKUPS not set in .env file")
+
+        save_path = os.path.join(database_backup_path, file_name)
+        await self.mongo_database_manager.save_json(collection_name=collection_name, save_path=save_path)
 
         await status_message.edit(content=f"Finished saving {total_thread_count} threads")
         print(f"Finished saving {total_thread_count} threads")
-
-    import re
-
-    async def get_discord_id_from_init_message(self, thread: discord.Thread) -> int:
-        trigger_phrase = "is the thread owner."
-        discord_id_pattern = re.compile('^<@(\d{18})>$')
-
-        async for message in thread.history(limit=None, oldest_first=True):
-            if trigger_phrase in message.content:
-                discord_id_match = discord_id_pattern.search(message.content.split(trigger_phrase)[0])
-
-                if discord_id_match:
-                    discord_id = int(discord_id_match.group(1))
-                    return discord_id
-                else:
-                    raise ValueError(
-                        f"Extracted discord id does not match expected format (18 digit integer wrapped with '<@' and '>')")
-
-        raise ValueError(f"Could not find discord id in thread {thread.name}")
 
     async def send_status_message_update(self, ctx, saving_thread_string, status_message):
         update_status_message_string = status_message.content + f"\n{saving_thread_string}"
@@ -231,12 +197,16 @@ class ThreadScraperCog(commands.Cog):
             logger.info(f"Saving all threads in channel: {ctx.channel.name}")
         return channels
 
-    async def get_list_of_threads(self, channel:discord.TextChannel):
+    async def get_list_of_threads(self, channel: discord.TextChannel):
         threads = []
-        async for message in channel.history():
-            if message.thread:
-                if not message.thread in threads:
-                    threads.append(message.thread)
+        try:
+            async for message in channel.history():
+                if message.thread:
+                    if not message.thread in threads:
+                        threads.append(message.thread)
+        except Forbidden:
+            logger.info(f"Could not access channel: {channel.name}")
+            pass
         return threads
 
     def determine_if_green_check_present(self, message: discord.Message):
