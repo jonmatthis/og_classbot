@@ -1,4 +1,5 @@
 import discord
+from datetime import datetime
 
 
 class ThreadStats:
@@ -11,10 +12,12 @@ class ThreadStats:
         self.character_count_for_this_thread_student = 0
         self.green_check_emoji_present_in_thread = False
 
+        # Add the new cumulative word count lists
+        self.word_count_cumulative_total = []
+        self.word_count_cumulative_student = []
+
     def update(self, message: discord.Message):
-        is_bot_user = False
-        if message.author.id == self.bot_id:
-            is_bot_user = True
+        is_bot_user = message.author.id == self.bot_id
         message_author_str = str(message.author)
 
         message_content = message.content
@@ -32,9 +35,14 @@ class ThreadStats:
         message_character_count = len(message_content)
         self.character_count_for_this_thread_total += message_character_count
 
-        if message.author.id != is_bot_user:
+        # Update the total word count list
+        self.word_count_cumulative_total.append([message.created_at, self.word_count_for_this_thread_total])
+
+        if not is_bot_user:
             self.word_count_for_this_thread_student += message_word_count
             self.character_count_for_this_thread_student += message_character_count
+            # Update the student word count list
+            self.word_count_cumulative_student.append([message.created_at, self.word_count_for_this_thread_student])
 
     def determine_if_green_check_present(self, message: discord.Message):
         reactions = message.reactions
@@ -60,4 +68,6 @@ class ThreadStats:
             "total_character_count_for_this_thread": self.character_count_for_this_thread_total,
             "character_count_for_this_thread_student": self.character_count_for_this_thread_student,
             "green_check_emoji_present": self.green_check_emoji_present_in_thread,
+            "cumulative_word_count_total": self.word_count_cumulative_total,
+            "cumulative_word_count_student": self.word_count_cumulative_student,
         }
