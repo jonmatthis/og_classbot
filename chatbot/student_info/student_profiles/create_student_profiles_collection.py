@@ -32,19 +32,9 @@ async def create_student_profiles_collection(thread_collection_name: str,
 
     # student_profiles = update_and_sort_word_count_timelines(student_profiles)
 
-    cumulative_word_count_by_student = {}
+    [profile.calculate_cumulative_wordcount() for profile in student_profiles.values()]
+
     for student_uuid, profile in student_profiles.items():
-
-
-        for count_type, word_count_by_datetimes in profile.word_count_by_datetimes_by_type.items():
-            profile.cumulative_word_count_by_datetimes_by_type[count_type] = []
-            cumulative_word_count = 0
-            for datetime, word_count in word_count_by_datetimes:
-                cumulative_word_count += word_count
-                profile.cumulative_word_count_by_datetimes_by_type[count_type].append((datetime, cumulative_word_count))
-        cumulative_word_count_by_student[profile.initials] = profile.cumulative_word_count_by_datetimes_by_type
-
-        # Use the upsert method to insert or update the student's data
         await mongo_database_manager.upsert(
             collection=student_profiles_collection_name,
             query={'_student_uuid': student_uuid},
@@ -53,8 +43,6 @@ async def create_student_profiles_collection(thread_collection_name: str,
     if show_plots:
         plot_word_count_timelines(student_profiles)
         print(f"Created {student_profiles_collection_name} collection - with {len(student_profiles)} students")
-
-
 
 
 

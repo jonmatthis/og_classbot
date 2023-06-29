@@ -37,3 +37,13 @@ class StudentProfile(BaseModel):
         for count_type, all_wordcount_by_datetimes in self.word_count_by_datetimes_by_type.items():
             all_wordcount_by_datetimes.extend(deepcopy(thread_stats.wordcount_by_datetimes_by_type[count_type]))
             self.word_count_by_datetimes_by_type[count_type] = sorted(all_wordcount_by_datetimes)
+
+    def calculate_cumulative_wordcount(self):
+        for count_type, word_count_by_datetimes in self.word_count_by_datetimes_by_type.items():
+            self.cumulative_word_count_by_datetimes_by_type[count_type] = []
+            cumulative_word_count = 0
+            for datetime, word_count in word_count_by_datetimes:
+                cumulative_word_count += word_count
+                self.cumulative_word_count_by_datetimes_by_type[count_type].append(
+                    (datetime, cumulative_word_count))
+            self.cumulative_word_count_by_datetimes_by_type[count_type].sort(key=lambda x: x[0])
