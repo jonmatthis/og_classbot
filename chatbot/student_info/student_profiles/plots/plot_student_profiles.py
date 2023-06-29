@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from typing import Dict
 
@@ -107,15 +108,9 @@ def plot_student_profiles(student_profiles: Dict[str, StudentProfile]):
     fig.show()
 
 
-if __name__ == "__main__":
-    import asyncio
 
-    student_profiles = asyncio.run(get_student_profiles())
-
-
+def main():
     app = dash.Dash(__name__)
-
-
     @app.callback(
         dash.dependencies.Output('wordcount-plot', 'figure'),
         [dash.dependencies.Input('refresh-button', 'n_clicks')]
@@ -125,9 +120,14 @@ if __name__ == "__main__":
         return plot_word_count_timelines(student_profiles)
 
 
+    initial_figure = update_figure(None)
+
     app.layout = html.Div([
         html.Button('Refresh data', id='refresh-button'),
-        dcc.Graph(id='wordcount-plot'),
-    ])
+        dcc.Graph(id='wordcount-plot', figure=initial_figure, style={'height': '90vh'}),
+    ], style={'height': '100vh'})
 
     app.run_server(debug=True)
+
+if __name__ == "__main__":
+    main()
