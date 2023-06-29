@@ -8,8 +8,8 @@ from chatbot.discord_bot.cogs.thread_scraper_cog.thread_stats import ThreadStats
 
 
 class StudentProfile(BaseModel):
-    _uuid: str
-    _initials: str
+    uuid: str
+    initials: str
     student_info: Dict[str, str] = Field(default_factory=lambda: {
         '_student_name': '', '_student_username': ''})
     threads: List[Dict] = Field(default_factory=list)

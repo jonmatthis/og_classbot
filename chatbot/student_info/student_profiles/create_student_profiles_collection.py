@@ -1,4 +1,5 @@
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
+from chatbot.student_info.student_profiles.plots.plot_student_profiles import plot_word_count_timelines
 from chatbot.student_info.student_profiles.student_profile_models import StudentProfile
 
 
@@ -17,8 +18,8 @@ async def create_student_profiles_collection(thread_collection_name: str,
 
         if student_uuid not in student_profiles:
             student_profiles[student_uuid] = StudentProfile(
-                _uuid=student_uuid,
-                _initials=thread['_student_initials'],
+                uuid=student_uuid,
+                initials=thread['_student_initials'],
                 student_info={'_student_name': thread['_student_name'],
                               '_student_username': thread['_student_username']},
                 threads=[],
@@ -33,35 +34,32 @@ async def create_student_profiles_collection(thread_collection_name: str,
 
     # student_profiles = update_and_sort_word_count_timelines(student_profiles)
 
+    cumulative_word_count_by_student = {}
     for student_uuid, profile in student_profiles.items():
+
+        cumulative_word_count_by_datetimes = {}
+
+        for count_type, word_count_by_datetimes in profile.word_count_by_datetimes_by_type.items():
+            cumulative_word_count_by_datetimes[count_type] = []
+            cumulative_word_count = 0
+            for datetime, word_count in word_count_by_datetimes:
+                cumulative_word_count += word_count
+                cumulative_word_count_by_datetimes[count_type].append((datetime, cumulative_word_count))
+        cumulative_word_count_by_student[profile.initials] = cumulative_word_count_by_datetimes
+
         # Use the upsert method to insert or update the student's data
         await mongo_database_manager.upsert(
             collection=student_profiles_collection_name,
             query={'_student_uuid': student_uuid},
-            data=({'$set': profile.dict()})
+            data=({'$set': {**profile.dict(),
+                            'word_count_by_datetimes_by_type': cumulative_word_count_by_datetimes}})
         )
+    plot_word_count_timelines(cumulative_word_count_by_student)
     print(f"Created {student_profiles_collection_name} collection - with {len(student_profiles)} students")
 
 
-# def update_and_sort_word_count_timelines(student_profiles=Dict[StudentProfile]) -> Dict[str, List]:
-#     for student_uuid, profile in student_profiles.items():
-#         word_count_timelines = {}
-#         count_types = ["total", "student", "bot"]
-#         for type in count_types:
-#             thread_timelines = [thread.word_count_cumulative[type] for thread in threads]
-#             word_count_timelines[type] = thread_timelines
-#
-#             # Convert datetime strings to datetime objects for proper sorting
-#             for thread_timeline in thread_timelines:
-#                 f = 9
-#             # Sort the timeline by datetime
-#             thread_timeline.sort(key=lambda x: x[0])
-#
-#             # Convert datetime objects back to strings
-#             for entry_number in range(len(thread_timeline)):
-#                 thread_timeline[entry_number][0] = thread_timeline[entry_number][0].isoformat()
-#
-#     return word_count_timelines
+
+
 
 
 if __name__ == "__main__":
@@ -76,8 +74,8 @@ if __name__ == "__main__":
     asyncio.run(create_student_profiles_collection(thread_collection_name=thread_collection_name,
                                                    student_profiles_collection_name="student_profiles"))
 
-    print("Creating anonymized student profiles collection")
-    asyncio.run(create_student_profiles_collection(thread_collection_name=f"anonymized_{thread_collection_name}",
-                                                   student_profiles_collection_name="anonymized_student_profiles"))
+    # print("Creating anonymized student profiles collection")
+    # asyncio.run(create_student_profiles_collection(thread_collection_name=f"anonymized_{thread_collection_name}",
+    #                                                student_profiles_collection_name="anonymized_student_profiles"))
 
     print("Done!")
