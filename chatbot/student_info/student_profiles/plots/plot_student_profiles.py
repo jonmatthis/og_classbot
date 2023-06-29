@@ -1,9 +1,9 @@
-import asyncio
 import logging
-from typing import List, Dict, Union
+from typing import Dict
 
 from plotly import graph_objects as go
 from plotly.subplots import make_subplots
+from pydantic import BaseModel
 
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
 from chatbot.student_info.student_profiles.student_profile_models import StudentProfile
@@ -29,21 +29,45 @@ def calculate_cumulative_wordcount(student_profiles: Dict[str, StudentProfile]):
     return cumulative_word_count_by_datetimes_by_type
 
 
-def plot_word_count_timelines(student_profiles: Dict[str, StudentProfile]):
-    fig = make_subplots(rows=1, cols=2, shared_xaxes=True)
+class SubplotModel(BaseModel):
+    row: int
+    col: int
+    title: str
+    xaxis_title: str
+    yaxis_title: str
+    autosize: bool = True
 
-    row = 1
+
+def plot_word_count_timelines(student_profiles: Dict[str, StudentProfile]):
+
+
+
+    class_subplot = SubplotModel(row=1,
+                                 col=1,
+                                 title="Class Total",
+                                 xaxis_title="Date",
+                                 yaxis_title="Cumulative Word Count")
+    student_subplot = SubplotModel(row=2,
+                                 col=1,
+                                    title="Per Student",
+                                    xaxis_title="Date",
+                                    yaxis_title="Cumulative Word Count(student+bot)")
+
+    fig = make_subplots(rows=2, cols=1, shared_xaxes=True, subplot_titles=(class_subplot.title, student_subplot.title))
+
     cumulative_word_count_by_datetimes_by_type = calculate_cumulative_wordcount(student_profiles)
     for count_type, cumulative_word_count_by_datetimes in cumulative_word_count_by_datetimes_by_type.items():
         datetimes, word_counts = zip(*cumulative_word_count_by_datetimes)
         fig.add_trace(go.Scatter(x=datetimes,
                                  y=word_counts,
                                  mode='lines+markers',
-                                 marker=dict(size=6),
+                                 marker=dict(size=5),
                                  name=f"{count_type}"),
-                      row=row, col=1)
+                      row=class_subplot.row, col=class_subplot.col)
+        fig.update_xaxes(title_text=class_subplot.xaxis_title, row=class_subplot.row, col=class_subplot.col)
+        fig.update_yaxes(title_text=class_subplot.yaxis_title, row=class_subplot.row, col=class_subplot.col)
 
-    row = 2
+
     for student_id, profile in student_profiles.items():
         cumulative_word_count_by_datetimes = profile.cumulative_word_count_by_datetimes_by_type
         word_count_by_datetimes = cumulative_word_count_by_datetimes['total']
@@ -52,18 +76,16 @@ def plot_word_count_timelines(student_profiles: Dict[str, StudentProfile]):
         fig.add_trace(go.Scatter(x=datetimes,
                                  y=word_counts,
                                  mode='lines+markers',
-                                 marker=dict(size=6),
+                                 marker=dict(size=5),
                                  name=f"{student_id}"),
-                      row=row, col=1)
-
+                      row=student_subplot.row, col=student_subplot.col)
+        fig.update_xaxes(title_text=student_subplot.xaxis_title, row=student_subplot.row, col=student_subplot.col)
+        fig.update_yaxes(title_text=student_subplot.yaxis_title, row=student_subplot.row, col=student_subplot.col)
 
     fig.update_layout(
-        title='Cumulative Word Count by Student',
-        xaxis_title='Date',
-        yaxis_title='Cumulative Word Count (Student+Bot)',
+        title='Cumulative Word Count',
         autosize=True
     )
-
     return fig
 
 
