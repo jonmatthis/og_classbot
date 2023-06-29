@@ -1,6 +1,8 @@
 import logging
 from typing import Dict
 
+import dash as dash
+from dash import html, dcc
 from plotly import graph_objects as go
 from plotly.subplots import make_subplots
 from pydantic import BaseModel
@@ -39,19 +41,16 @@ class SubplotModel(BaseModel):
 
 
 def plot_word_count_timelines(student_profiles: Dict[str, StudentProfile]):
-
-
-
     class_subplot = SubplotModel(row=1,
                                  col=1,
                                  title="Class Total",
                                  xaxis_title="Date",
                                  yaxis_title="Cumulative Word Count")
     student_subplot = SubplotModel(row=2,
-                                 col=1,
-                                    title="Per Student",
-                                    xaxis_title="Date",
-                                    yaxis_title="Cumulative Word Count(student+bot)")
+                                   col=1,
+                                   title="Per Student",
+                                   xaxis_title="Date",
+                                   yaxis_title="Cumulative Word Count(student+bot)")
 
     fig = make_subplots(rows=2, cols=1, shared_xaxes=True, subplot_titles=(class_subplot.title, student_subplot.title))
 
@@ -66,7 +65,6 @@ def plot_word_count_timelines(student_profiles: Dict[str, StudentProfile]):
                       row=class_subplot.row, col=class_subplot.col)
         fig.update_xaxes(title_text=class_subplot.xaxis_title, row=class_subplot.row, col=class_subplot.col)
         fig.update_yaxes(title_text=class_subplot.yaxis_title, row=class_subplot.row, col=class_subplot.col)
-
 
     for student_id, profile in student_profiles.items():
         cumulative_word_count_by_datetimes = profile.cumulative_word_count_by_datetimes_by_type
@@ -113,4 +111,23 @@ if __name__ == "__main__":
     import asyncio
 
     student_profiles = asyncio.run(get_student_profiles())
-    plot_student_profiles(student_profiles)
+
+
+    app = dash.Dash(__name__)
+
+
+    @app.callback(
+        dash.dependencies.Output('wordcount-plot', 'figure'),
+        [dash.dependencies.Input('refresh-button', 'n_clicks')]
+    )
+    def update_figure(n_clicks):
+        student_profiles = asyncio.run(get_student_profiles())
+        return plot_word_count_timelines(student_profiles)
+
+
+    app.layout = html.Div([
+        html.Button('Refresh data', id='refresh-button'),
+        dcc.Graph(id='wordcount-plot'),
+    ])
+
+    app.run_server(debug=True)
