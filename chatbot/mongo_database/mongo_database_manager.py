@@ -62,6 +62,8 @@ class MongoDatabaseManager:
     def get_collection(self, collection_name: str):
         return self._database[collection_name]
 
+    def get_collection_as_dict(self, collection_name: str):
+        return self._database[collection_name].find().to_dict()
     async def insert(self, collection, document):
         return await self._database[collection].insert_one(document)
 

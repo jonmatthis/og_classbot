@@ -20,7 +20,7 @@ class StudentProfile(BaseModel):
         default_factory=lambda: {"total": 0, "student": 0, "bot": 0})
     word_count_by_datetimes_by_type: Dict[str, List[Tuple[datetime, int]]] = Field(
         default_factory=lambda: {"total": [], "student": [], "bot": []})
-
+    cumulative_word_count_by_datetimes_by_type: Dict[str, List[Tuple[datetime, int]]] = Field(default_factory=lambda: {"total": [], "student": [], "bot": []})
     def update(self, thread: Dict[str, Any]):
 
         thread_stats = ThreadStats(**thread["thread_statistics"])
