@@ -38,7 +38,7 @@ async def create_student_profiles_collection(thread_collection_name: str,
         await mongo_database_manager.upsert(
             collection=student_profiles_collection_name,
             query={'_student_uuid': student_uuid},
-            data=({'$set': profile})
+            data=({'$set': profile.dict()})
         )
     print(f"Created {student_profiles_collection_name} collection - with {len(student_profiles)} students")
 

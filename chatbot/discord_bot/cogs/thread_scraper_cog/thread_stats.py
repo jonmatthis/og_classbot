@@ -9,11 +9,13 @@ class ThreadStats(BaseModel):
     bot_id: int = None
     green_check_emoji_present: bool = False
     thread_as_list_of_strings: List[str] = Field(default_factory=list)
+    message_count_for_this_thread: Dict[str, int] = Field(default_factory=lambda: {"total": 0, "student": 0, "bot": 0})
     word_count_for_this_thread: Dict[str, int] = Field(default_factory=lambda: {"total": 0, "student": 0, "bot": 0})
     character_count_for_this_thread: Dict[str, int] = Field(
         default_factory=lambda: {"total": 0, "student": 0, "bot": 0})
-    word_count_cumulative: Dict[str, List[Tuple[datetime, int]]] = Field(
-        default_factory=lambda: {"total": [], "student": [], "bot": []})
+    wordcount_by_datetimes_by_type: Dict[str, List[Tuple[datetime, int]]] = Field(
+        default_factory=lambda: {"total": [], "student": [], "bot": []},
+        description="A dictionary of lists of [datetime, word_count] pairs for each entry in the count_types list (total, student, bot)")
     thread_as_one_string: str = Field(default="")
 
     class Config:
@@ -37,21 +39,21 @@ class ThreadStats(BaseModel):
         message_word_count = len(message_content.split(' '))
         message_character_count = len(message_content)
 
+        self.message_count_for_this_thread["total"] += 1
         self.word_count_for_this_thread["total"] += message_word_count
         self.character_count_for_this_thread["total"] += message_character_count
-        self.word_count_cumulative["total"].append(
-            (message.created_at, self.word_count_for_this_thread["total"]))
+        self.wordcount_by_datetimes_by_type["total"].append((message.created_at, message_word_count))
 
         if not is_bot_user:
+            self.message_count_for_this_thread["student"] += 1
             self.word_count_for_this_thread["student"] += message_word_count
             self.character_count_for_this_thread["student"] += message_character_count
-            self.word_count_cumulative["student"].append(
-                (message.created_at, self.word_count_for_this_thread["student"]))
+            self.wordcount_by_datetimes_by_type["student"].append((message.created_at, message_word_count))
         else:
+            self.message_count_for_this_thread["bot"] += 1
             self.word_count_for_this_thread["bot"] += message_word_count
             self.character_count_for_this_thread["bot"] += message_character_count
-            self.word_count_cumulative["bot"].append(
-                (message.created_at, self.word_count_for_this_thread["bot"]))
+            self.wordcount_by_datetimes_by_type["bot"].append((message.created_at, message_word_count))
 
     def determine_if_green_check_present(self, message: Message) -> bool:
         reactions = message.reactions
