@@ -1,7 +1,5 @@
 # chatbot
 
-An AI Discord chatbot for what to teach a class with 🤖❤️✨
-
 Uses `discord.py` for the Discord stuff and `langchain` for the LLM stuff (mostly relying on OpenAI's `gpt-4` and Anthropic's `claude-v1` for the LLM stuff)
 
 The bot's main AI brain lives in: `chatbot/ai/assistants/course_assistant`
