@@ -45,7 +45,11 @@ TEST_MONGO_QUERY = {"student_id": "test_student",
 def default_serialize(o: Any) -> str:
     if isinstance(o, datetime):
         return o.isoformat()
-    elif hasattr(o, "__dict__"):
+    elif hasattr(o, "dict"):
+        return o.dict()
+    elif hasattr(o, "to_dict"):
+        return o.to_dict()
+    elif hasattr("__dict__") and not isinstance(o, dict):
         return o.__dict__
     return str(o)
 
@@ -53,10 +57,6 @@ class MongoDatabaseManager:
     def __init__(self, ):
         self._client = AsyncIOMotorClient(get_mongo_uri())
         self._database = self._client.get_default_database(get_mongo_database_name())
-
-    @property
-    def chat_history_collection(self):
-        return self._database[get_mongo_chat_history_collection_name()]
 
 
     def get_collection(self, collection_name: str):

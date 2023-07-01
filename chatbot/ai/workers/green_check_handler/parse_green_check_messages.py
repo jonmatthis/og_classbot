@@ -5,15 +5,12 @@ from pathlib import Path
 from typing import Union
 
 from dotenv import load_dotenv
-
 from langchain import PromptTemplate, OpenAI
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, Field
 
-from chatbot.ai.workers.green_check_handler.grab_green_check_messages import grab_green_check_messages
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
-from chatbot.student_info.find_student_name import get_initials
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -24,17 +21,22 @@ class PaperSummary(BaseModel):
     author_year: str = Field("", description="The author and year of the research article (e.g. 'Smith et al. 2020')")
     citation: str = Field("", description="The citation to the research article")
     abstract: str = Field("", description="A copy-paste of the abstract of the research article")
-    detailed_summary: str = Field("", description="A detailed summary/overview of the major points of the paper in a bulleted outline format")
+    detailed_summary: str = Field("",
+                                  description="A detailed summary/overview of the major points of the paper in a bulleted outline format ( with * to denote bullet points)")
     short_summary: str = Field("", description="A short (2-3 sentence) summary of the paper")
     very_short_summary: str = Field("", description="A very short one sentence summary of the research article")
     extremely_short_summary: str = Field("", description="An extremely short 6-10 word summary of the research article")
-    basic_methodology: str = Field("", description="A basic description of the methodology used in the research article")
+    basic_methodology: str = Field("",
+                                   description="A basic description of the methodology used in the research article (e.g. information about tools used, species studied, analytical techniques, etc.)")
+    summary_title: str = Field("",
+                               description="A summary title made by combining the `author_year` field with the `extremely_short_summary` field, like this: ['author_year'] - ['extremely_short_summary']")
     tags: str = Field("", description="A list of tags formatted using #kebab-case-lowercase")
-    summary_title: str = Field("", description="A summary title made by combining the `author_year` field with the `extremely_short_summary` field, like this: ['author_year'] - ['extremely_short_summary']")
-
+    backlinks: str = Field("",
+                           description="The same as the 'tags' field, but with double brackets around the tag name and without the # symbol, so '#tag-name' becomes '[[tag-name]]'")
 
     def __str__(self):
         tags = "\n".join(self.tags.split(" "))
+        backlinks = "\n".join(self.backlinks.split(" "))
         return f"""
 # {self.summary_title}\n
 ## Title\n
@@ -55,14 +57,17 @@ class PaperSummary(BaseModel):
 {self.extremely_short_summary}\n\n
 ## Tags\n
 {tags}
+## Backlinks\n
+{backlinks}
 """
+
 
 class GreenCheckMessageParser:
     def __init__(self):
         load_dotenv()
         self._llm = OpenAI(model_name="text-davinci-003",
                            temperature=0,
-                            max_tokens=-1,
+                           max_tokens=-1,
                            streaming=True,
                            callbacks=[StreamingStdOutCallbackHandler()],
                            )
@@ -93,10 +98,10 @@ class GreenCheckMessageParser:
         response = self.parse_input(input_text=input_text)
         return response
 
+
 async def parse_green_check_messages(overwrite: bool = False,
                                      save_to_json: bool = True,
                                      collection_name: str = "green_check_messages"):
-
     parser = GreenCheckMessageParser()
 
     mongo_database = MongoDatabaseManager()
@@ -109,33 +114,34 @@ async def parse_green_check_messages(overwrite: bool = False,
     for entry in all_entries:
 
         print("=====================================================================================================")
-        print(f"Green Check Messages for student: {entry['_student_name']}\n")
+        print(f"Green Check Messages for student: {entry['_student_initials']}\n")
         print("=====================================================================================================")
 
         messages = entry["green_check_messages"]
         if len(messages) == 0:
-            raise ValueError(f"Student {entry['_student_name']} has no green check messages")
-
+            raise ValueError(f"Student {entry['_student_initials']} has no green check messages")
 
         messages = "\n".join(messages)
         parsed_output = await parser.aparse_input(input_text=messages)
 
-
+        student_query = {"_student_initials": entry["_student_initials"],
+                         "_student_uuid": entry["_student_uuid"], }
         await mongo_database.upsert(
             collection=collection_name,
-            query={"_student_name": entry["_student_name"]},
-            data={"$set": {"parsed_output_dict": parsed_output.dict(),
-                           "parsed_output_string": str(parsed_output),
+            query=student_query,
+            data={"$set": {**parsed_output.dict(),
+                           "_parsed_output_string": str(parsed_output),
                            "messages": messages,
                            }}
         )
-        student_initials = get_initials(entry["_student_name"])
-
-        save_green_check_entry_to_markdown(base_summary_name="green_check_messages",
+        save_green_check_entry_to_markdown(base_summary_name="green_check_paper_summaries",
                                            text=str(parsed_output),
-                                           file_name=f"{student_initials}_{parsed_output.summary_title}", )
+                                           file_name=f"{parsed_output.author_year}_{parsed_output.title}_{entry['_student_initials']}",
+                                           backlinks=parsed_output.backlinks,
+                                           tags=parsed_output.tags,
+                                           )
 
-        print(f"Student: {entry['_student_name']}: \n"
+        print(f"Student: {entry['_student_initials']}: \n"
               f"Messages with green check: \n{messages}\n"
               f"Parsed output: \n{parsed_output}")
 
@@ -144,13 +150,15 @@ async def parse_green_check_messages(overwrite: bool = False,
 
 
 def save_green_check_entry_to_markdown(base_summary_name: str,
-                                       text:str,
+                                       text: str,
                                        file_name: str,
                                        subfolder: str = None,
                                        save_path: Union[str, Path] = None,
+                                       backlinks: str = None,
+                                       tags: str = None,
                                        ):
-    load_dotenv()
     if not save_path:
+        load_dotenv()
         save_path = Path(
             os.getenv(
                 "PATH_TO_COURSE_DROPBOX_FOLDER")) / "course_data" / "chatbot_data" / base_summary_name
@@ -168,14 +176,29 @@ def save_green_check_entry_to_markdown(base_summary_name: str,
         f.write(text)
 
     print(f"Markdown file generated and saved at {str(save_path)}.")
+    if backlinks:
+        backlinks_split = backlinks.split(" ")
+        for backlink in backlinks_split:
+            backlinks_clean = backlink.replace("[", "").replace("]", "")
+            backlink_md  = backlinks_clean +  ".md"
+            tag_path = save_path.parent / "tags"
+            tag_path.mkdir(parents=True, exist_ok=True)
+            backlink_path = tag_path / backlink_md
+
+            if tags:
+                backlink_path.write_text("\n".join(tags), encoding="utf-8")
+            else:
+                backlink_path.touch(exist_ok=True)
+
 
 
 if __name__ == "__main__":
     import asyncio
-    asyncio.run(grab_green_check_messages(server_name="Neural Control of Real World Human Movement 2023 Summer1",
-                                          overwrite=True,
-                                          save_to_json=True,
-                                          ))
+
+    # asyncio.run(grab_green_check_messages(server_name="Neural Control of Real World Human Movement 2023 Summer1",
+    #                                       overwrite=True,
+    #                                       save_to_json=True,
+    #                                       ))
 
     asyncio.run(parse_green_check_messages(collection_name="green_check_messages",
                                            overwrite=True,

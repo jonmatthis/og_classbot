@@ -22,7 +22,7 @@ async def grab_green_check_messages(server_name: str,
     total_cost = 0
     for thread_entry in all_threads:
 
-        if not thread_entry["green_check_emoji_present"]:
+        if not thread_entry["thread_statistics"]["green_check_emoji_present"]:
             continue
 
         print("=====================================================================================================")
@@ -30,8 +30,7 @@ async def grab_green_check_messages(server_name: str,
         print(
             f"Thread: {thread_entry['thread_title']}, Channel: {thread_entry['channel']}, Created at: {thread_entry['created_at']}")
         print(f"{thread_entry['thread_url']}")
-        query = {"_student_name": thread_entry["_student_name"],
-                 "_student_discord_name": thread_entry["_student_username"],
+        query = {"_student_initials": thread_entry["_student_initials"],
                  "_student_uuid": thread_entry["_student_uuid"],
                  "thread_id": int(thread_entry["thread_id"]),
                  "thread_url": thread_entry["thread_url"],
@@ -39,14 +38,15 @@ async def grab_green_check_messages(server_name: str,
 
         messages_with_green_check = []
         for message in thread_entry["messages"]:
-            if message["green_check_emoji_present_in_message"]:
-                messages_with_green_check.append(message["content"])
+            if len(message["reactions"]) > 0:
+                if any([reaction == "✅" for reaction in message["reactions"]]):
+                    messages_with_green_check.append(message["content"])
 
-                await mongo_database.upsert(
-                    collection=collection_name,
-                    query=query,
-                    data={"$addToSet": {"green_check_messages": message["content"]}}
-                )
+                    await mongo_database.upsert(
+                        collection=collection_name,
+                        query=query,
+                        data={"$addToSet": {"green_check_messages": message["content"]}}
+                    )
         print(f"Student: {thread_entry['_student_name']}: \n"
               f"Messages with green check: {messages_with_green_check}")
 
