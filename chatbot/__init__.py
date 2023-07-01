@@ -1,5 +1,5 @@
 """ An ai-enabled chatbot """
-__version__ = "v0.1.0"
+__version__ = "v1.0.0"
 
 import sys
 from pathlib import Path
