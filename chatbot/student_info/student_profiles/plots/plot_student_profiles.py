@@ -146,8 +146,8 @@ def main():
                                                                                      'width': '70%',
                                                                                      'align': 'center'}),
     ], style={'height': '100vh', 'display': 'flex', 'flexDirection': 'column', 'alignItems': 'center'})
-    plot(initial_figure_class, filename='figure_class.html')
-    plot(initial_figure_student, filename='figure_student.html')
+    plot(initial_figure_class, filename='html/figure_class.html')
+    plot(initial_figure_student, filename='html/figure_student.html')
     app.run_server(debug=True)
 
 

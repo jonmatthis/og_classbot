@@ -10,6 +10,7 @@ from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, Field
 
+from chatbot.ai.workers.green_check_handler.grab_green_check_messages import grab_green_check_messages
 from chatbot.mongo_database.mongo_database_manager import MongoDatabaseManager
 
 logging.basicConfig(level=logging.INFO)
@@ -22,7 +23,7 @@ class PaperSummary(BaseModel):
     citation: str = Field("", description="The citation to the research article")
     abstract: str = Field("", description="A copy-paste of the abstract of the research article")
     detailed_summary: str = Field("",
-                                  description="A detailed summary/overview of the major points of the paper in a bulleted outline format ( with * to denote bullet points)")
+                                  description="A detailed summary/overview of the major points of the paper in a bulleted outline format ( with * to denote bullet points) with 1-2 sentence top level bullet points and second-level bullet points")
     short_summary: str = Field("", description="A short (2-3 sentence) summary of the paper")
     very_short_summary: str = Field("", description="A very short one sentence summary of the research article")
     extremely_short_summary: str = Field("", description="An extremely short 6-10 word summary of the research article")
@@ -56,7 +57,7 @@ class PaperSummary(BaseModel):
 ## Extremely Short Summary\n
 {self.extremely_short_summary}\n\n
 ## Tags\n
-{tags}
+{tags}\n\n
 ## Backlinks\n
 {backlinks}
 """
@@ -153,52 +154,54 @@ def save_green_check_entry_to_markdown(base_summary_name: str,
                                        text: str,
                                        file_name: str,
                                        subfolder: str = None,
-                                       save_path: Union[str, Path] = None,
+                                       save_directory: Union[str, Path] = None,
                                        backlinks: str = None,
                                        tags: str = None,
                                        ):
-    if not save_path:
+    if not save_directory:
         load_dotenv()
-        save_path = Path(
+        save_directory = Path(
             os.getenv(
                 "PATH_TO_COURSE_DROPBOX_FOLDER")) / "course_data" / "chatbot_data" / base_summary_name
     if subfolder:
-        save_path = save_path / subfolder
+        save_directory = save_directory / subfolder
 
-    save_path.mkdir(parents=True, exist_ok=True)
-
+    save_directory.mkdir(parents=True, exist_ok=True)
+    summaries_directory = save_directory / "paper_summaries"
     clean_file_name = file_name.replace(":", "_").replace(".", "_").replace(" ", "_")
     clean_file_name += ".md"
 
-    save_path = save_path / clean_file_name
 
-    with open(str(save_path), 'w', encoding='utf-8') as f:
+    with open(str(summaries_directory), 'w', encoding='utf-8') as f:
         f.write(text)
 
-    print(f"Markdown file generated and saved at {str(save_path)}.")
+    print(f"Markdown file generated and saved at {str(save_directory)}.")
     if backlinks:
         backlinks_split = backlinks.split(" ")
         for backlink in backlinks_split:
             backlinks_clean = backlink.replace("[", "").replace("]", "")
             backlink_md  = backlinks_clean +  ".md"
-            tag_path = save_path.parent / "tags"
+            tag_path = save_directory.parent / "tags"
             tag_path.mkdir(parents=True, exist_ok=True)
             backlink_path = tag_path / backlink_md
 
             if tags:
-                backlink_path.write_text("\n".join(tags), encoding="utf-8")
+                tags_split = tags.split(" ")
+                backlink_path.write_text("\n".join(tags_split), encoding="utf-8")
             else:
                 backlink_path.touch(exist_ok=True)
+
+        print(f"Backlinks generated and saved at {str(tag_path)}.")
 
 
 
 if __name__ == "__main__":
     import asyncio
 
-    # asyncio.run(grab_green_check_messages(server_name="Neural Control of Real World Human Movement 2023 Summer1",
-    #                                       overwrite=True,
-    #                                       save_to_json=True,
-    #                                       ))
+    asyncio.run(grab_green_check_messages(server_name="Neural Control of Real World Human Movement 2023 Summer1",
+                                          overwrite=True,
+                                          save_to_json=True,
+                                          ))
 
     asyncio.run(parse_green_check_messages(collection_name="green_check_messages",
                                            overwrite=True,
