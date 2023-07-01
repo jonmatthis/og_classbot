@@ -166,22 +166,24 @@ def save_green_check_entry_to_markdown(base_summary_name: str,
     if subfolder:
         save_directory = save_directory / subfolder
 
-    save_directory.mkdir(parents=True, exist_ok=True)
     summaries_directory = save_directory / "paper_summaries"
+    summaries_directory.mkdir(parents=True, exist_ok=True)
+
     clean_file_name = file_name.replace(":", "_").replace(".", "_").replace(" ", "_")
     clean_file_name += ".md"
+    summary_file_path = summaries_directory / clean_file_name
 
-
-    with open(str(summaries_directory), 'w', encoding='utf-8') as f:
+    with open(str(summary_file_path), 'w', encoding='utf-8') as f:
         f.write(text)
 
-    print(f"Markdown file generated and saved at {str(save_directory)}.")
+    print(f"Markdown file generated and saved at {str(summary_file_path)}.")
+
     if backlinks:
         backlinks_split = backlinks.split(" ")
         for backlink in backlinks_split:
             backlinks_clean = backlink.replace("[", "").replace("]", "")
             backlink_md  = backlinks_clean +  ".md"
-            tag_path = save_directory.parent / "tags"
+            tag_path = summaries_directory.parent / "tags"
             tag_path.mkdir(parents=True, exist_ok=True)
             backlink_path = tag_path / backlink_md
 
