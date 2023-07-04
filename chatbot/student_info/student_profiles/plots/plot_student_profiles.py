@@ -5,7 +5,7 @@ from typing import Dict
 import dash as dash
 from dash import html, dcc
 from plotly import graph_objects as go
-from plotly.offline import plot
+from plotly.io import to_html
 from plotly.subplots import make_subplots
 from pydantic import BaseModel
 
@@ -134,10 +134,10 @@ def main():
         return fig1, fig2
 
     initial_figure_class, initial_figure_student = update_figure(None)
-
+    create_combined_html_output(initial_figure_class, initial_figure_student)
     app.layout = html.Div([
         html.H1('Cumulative Word Count', style={'textAlign': 'center',
-                                                'fontFamily': 'Helvetica',}),
+                                                'fontFamily': 'Helvetica', }),
 
         dcc.Graph(id='wordcount-plot-class', figure=initial_figure_class, style={'height': '40vh',
                                                                                  'width': '70%',
@@ -146,9 +146,87 @@ def main():
                                                                                      'width': '70%',
                                                                                      'align': 'center'}),
     ], style={'height': '100vh', 'display': 'flex', 'flexDirection': 'column', 'alignItems': 'center'})
-    plot(initial_figure_class, filename='html/figure_class.html')
-    plot(initial_figure_student, filename='html/figure_student.html')
+
     app.run_server(debug=True)
+
+
+def create_combined_html_output(initial_figure_class, initial_figure_student):
+    # convert both figures to HTML divs
+    div1 = to_html(initial_figure_class, full_html=False)
+    div2 = to_html(initial_figure_student, full_html=False)
+    with open('html/combined_figures.html', 'w', encoding="utf-8") as file:
+        # write the HTML page structure
+        file.write(f"""
+        <html>
+        <head>
+            <title>Neural Control of Real World Human Movement - Summer 1 - 2023</title>
+            <style>
+            body {{
+                font-family: "Open Sans", Verdana, Arial, sans-serif;
+            }}
+            h1 {{
+                text-align: center;
+                color: #888888;
+                font-size: 2em;
+            }}
+            h2 {{
+                color: #008CBA;
+                text-align: center;
+            }}
+            p {{
+                text-indent: 5px;
+                text-align: justify;
+                align-content: center;
+            }}
+            .top_explanation {{
+                text-indent: 5px;
+                text-align: justify;
+                width: 60%;
+            }}
+            .plot {{
+                height: 50vh; 
+                width: 60%;
+            }}
+            .explanation {{
+                width: 30%;
+                padding-left: 5px;
+            }}
+            .section {{
+                display: flex;
+                flex-direction: row;
+                justify-content: center;
+                align-items: center;
+                margin-bottom: 10px;
+            }}
+            </style>
+        </head>
+        <body>
+            <h1>Words Generated in Neural Control of Real World Human Movement - Summer 1 - 2023</h1>
+            <div class="top_explanation">
+             The visualizations depict data from an asynchronous online course conducted in the summer of 2043. The course utilized an AI-powered Discord bot to facilitate course content and assignments. The bot was programmed with the syllabus and interacted with students based on their individual interests. Course assignments, instantiated by the bot, required students to interact with it in various ways - The first assignment was an "introduction" conversation wherein the student discussed their interests and the bot attemptd to find relevance to the course material. Later assignment involved the bot helping the students search PubMed and Google Scholar for relvant research articles, and then helping them summarize, format, and provide 'topic tags'. The results of this asignment may be viewed here: https://neuralcontrolhumanmovement-2023-summer1.github.io/main_course_repo/CourseObsidianVault/paper_summaries/
+             
+             
+            </div>
+            <div class="section">
+                <div class="plot">
+                    {div1}
+                </div>
+                <div class="explanation">
+                    <h2>Class Total Word Count</h2>
+            <p>Total number of words generated in this course. <span style="color:green">Green</span> dots denote words accumulated from a single message written by the students, <span style="color:red">Red</span> dots denote messages written by the bot (presumably read by the students) and the <span style="color:blue">blue</span> dots show the total words over time (student + bot)</p>       
+            </div>
+            </div>
+            <div class="section">
+                <div class="plot">
+                    {div2}
+                </div>
+                <div class="explanation">
+                    <h2>Per Student Word Count</h2>
+            <p>Words generated by each student (bot responses not shown). Different colored lines denote different students, with each dot representing the words accumulated from a single message. The vertical stripes represent times when the student was conversing with thebot in a thread. \n\n Note that one assignment involved copy-pasting paper abstracts into the chat, so not all of these words were specifically typed by students.</p>                </div>
+            </div>
+        </body>
+        </html>
+        """)
 
 
 if __name__ == "__main__":

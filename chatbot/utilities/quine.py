@@ -87,11 +87,12 @@ class Quine:
 
 if __name__ == "__main__":
 
-    base_directory_in = r"C:\Users\jonma\github_repos\jonmatthis\chatbot\chatbot\student_info\student_profiles"
+    base_directory_in = r"C:\Users\jonma\github_repos\freemocap_organization\skelly_viewer\skelly_viewer\matplotlib"
     quine = Quine(
         base_directory=base_directory_in,
         excluded_directories=["__pycache__",
                               ".git",
+                              "subplots",
 
                               ],
         included_extensions=[".py", ".html", ".js", ".css", ".md", ".json", ".csv", ".txt"],
