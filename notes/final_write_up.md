@@ -1,6 +1,5 @@
 
-# Title
-First Deployment of AI-Powered Chatbot in Online Asynchronous University Class
+# First Deployment of AI-Powered Chatbot in Online Asynchronous University Class
 
 <img width="1698" alt="image" src="https://github.com/jonmatthis/chatbot/assets/15314521/e4cdaea4-c7f2-4dca-9050-2d3f487ea389">
 
