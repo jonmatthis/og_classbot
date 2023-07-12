@@ -3,8 +3,7 @@
 
 <img width="1698" alt="image" src="https://github.com/jonmatthis/chatbot/assets/15314521/e4cdaea4-c7f2-4dca-9050-2d3f487ea389">
 
-
-### Introduction
+## Introduction
 
 This report outlines the first deployment of a novel human-in-the-loop, artificial-intelligence (AI) augmented educational methodology in an an online asynchronous class taught at an R1 university in Boston MA USA in May-June 2023.  
 
@@ -20,11 +19,11 @@ https://github.com/jonmatthis/chatbot/blob/main/chatbot/ai/assistants/course_ass
 The AI-augmented aspects of this course was developed using Python and utilized the LangChain package to interact with OpenAI's `gpt-4`, `gpt-3.5-turbo`, and Anthropic's `claude-v1` large language models (LLM's) to interact with the students using natural language chat features in a Discord server ("the course server"). The `Course Assistant` chatbot ("the bot", link to the bot's code and prompt) software was run in a local Docker image on the professor's personal computer  (though it really should have been on AWS or GCP or something). Conversations between students and the bot were periodically scraped from the course Discord server into a MongoDB non-relational database for storage, analysis, and processing via a variety of LLM-enabled methods
 
 
-### Course Structure and Methodology
+## Course Structure and Methodology
 
 The students interacted with the bot for most assignments, which were configured with various system prompts that would elicit different behaviors. The bot was instructed to steer conversations towards specific assignment goals. Student responses were then scraped and analyzed using summarization and schematization algorithms to understand their interests and guide lecture topics.
 
-### Results
+## Results
 Over the course of the 8-week course,  the 20 enrolled students cumulatively wrote approximately 50,000 words (NOTE - add averages, max, min, std-dev, reference a figure, mention and correct for the copy-paste-an-abstract assignment) in 113 total conversations (NOTE - get exact number, average per student, etc) with the AI-powered chatbot that was configured as a primary "Course Assistant" interface. The bot, in turn, produced approximately 100k words (NOTE - averages, etc) in response. This level of student engagement is notoriously difficult to elicit in online asynchronous courses, which suggests that AI-assisted, human-in-the-loop teaching practices could be developed to improve outcomes across a wide range of educational contexts
 
 
